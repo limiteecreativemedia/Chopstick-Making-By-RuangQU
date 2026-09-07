@@ -1,5 +1,13 @@
 export default async function handler(req, res) {
-  // Hanya menerima method POST
+  // Mengizinkan panggilan dari domain GitHub Pages
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
@@ -7,7 +15,6 @@ export default async function handler(req, res) {
   const { bookingId, customerName, customerEmail, customerPhone, amount, description } = req.body;
 
   try {
-    // Panggil API Resmi Mayar dari server Vercel (API Key tersembunyi dengan aman)
     const response = await fetch('https://api.mayar.id/hl/v1/payment/create', {
       method: 'POST',
       headers: {
@@ -20,7 +27,7 @@ export default async function handler(req, res) {
         mobileVia: customerPhone,
         amount: Number(amount),
         description: description || `Booking Chopstick Class - ${bookingId}`,
-        redirectUrl: `${req.headers.origin || 'https://limitecreativemedia.github.io/Chopstick-Making-By-RuangQU'}/?booking_id=${bookingId}&status=success`
+        redirectUrl: `https://limitecreativemedia.github.io/Chopstick-Making-By-RuangQU/?booking_id=${bookingId}&status=success`
       })
     });
 
