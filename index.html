@@ -80,10 +80,14 @@
       card: 'bg-white',
     };
 
-    // --- INTEGRASI PEMBAYARAN MAYAR VIA VERCEL SERVERLESS ---
+// --- INTEGRASI PEMBAYARAN MAYAR VIA VERCEL SERVERLESS ---
     const paymentService = {
       createPayment: async ({ bookingId, customerName, customerEmail, customerPhone, amount, description }) => {
         try {
+          // Mengambil URL lengkap halaman saat ini agar nama folder GitHub tidak terpotong
+          const currentBaseUrl = window.location.href.split('?')[0].split('#')[0];
+          const fullRedirectUrl = `${currentBaseUrl}?booking_id=${bookingId}&status=success`;
+
           const response = await fetch('/api/payment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -93,7 +97,8 @@
               customerEmail,
               customerPhone,
               amount,
-              description
+              description,
+              redirectUrl: fullRedirectUrl // Mengirimkan URL utuh ke Mayar
             })
           });
 
@@ -116,7 +121,7 @@
         }
       }
     };
-
+    
     // --- GENERATOR JADWAL BULANAN DENGAN SISTEM PENGURANGAN SLOT ---
     const generateMonthlySchedule = (bookedSlotsMap = {}) => {
       const schedule = [];
