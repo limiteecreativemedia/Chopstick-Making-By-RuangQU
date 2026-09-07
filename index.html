@@ -4,57 +4,49 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chopstick Making by RuangQu</title>
-  
+
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <script type="importmap">
-  {
-    "imports": {
-      "react": "https://esm.sh/react@18.2.0?dev",
-      "react-dom": "https://esm.sh/react-dom@18.2.0?dev",
-      "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?dev",
-      "lucide-react": "https://esm.sh/lucide-react@0.263.1?dev",
-      "firebase/app": "https://esm.sh/firebase@10.8.0/app",
-      "firebase/auth": "https://esm.sh/firebase@10.8.0/auth",
-      "firebase/firestore": "https://esm.sh/firebase@10.8.0/firestore"
-    }
-  }
-  </script>
-  
+
+  <!-- Google Fonts: Inter & Playfair Display -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
+  <!-- React 18 UMD -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+  <!-- Firebase v10 Compat SDKs (Reliable browser execution without bundler) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <!-- Babel Standalone -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #F9F7F2;
+      color: #2D2A26;
+    }
+    .font-serif {
+      font-family: 'Playfair Display', serif;
+    }
+  </style>
 </head>
-<body class="bg-[#F9F7F2]">
+<body class="min-h-screen flex flex-col">
   <div id="root"></div>
 
-  <script type="text/babel" data-type="module">
-    import React, { useState, useEffect, useMemo, useRef } from 'react';
-    import ReactDOM from 'react-dom/client';
-    import { 
-      Calendar, Clock, Users, ArrowRight, CheckCircle2, ChevronRight, 
-      Menu, X, MapPin, Search, Lock, Plus, Edit2, LayoutDashboard, 
-      CalendarDays, Ticket, Building, LogOut, ShieldAlert, AlertCircle,
-      CreditCard, RefreshCw, Check, Info, ExternalLink, Sliders
-    } from 'lucide-react';
-    import { 
-      initializeApp, getApps, getApp
-    } from 'firebase/app';
-    import { 
-      getAuth, 
-      signInWithEmailAndPassword, 
-      signInAnonymously, 
-      signInWithCustomToken, 
-      onAuthStateChanged, 
-      signOut 
-    } from 'firebase/auth';
-    import { 
-      getFirestore, collection, doc, setDoc, getDoc, onSnapshot, 
-      addDoc, updateDoc, deleteDoc, query, where, getDocs, serverTimestamp 
-    } from 'firebase/firestore';
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef, Component } = React;
 
+    // --- FIREBASE INITIALIZATION SAFEGUARD ---
     const firebaseConfig = typeof __firebase_config !== 'undefined' 
       ? JSON.parse(__firebase_config) 
       : {
-          apiKey: "FIREBASE_API_KEY_PLACEHOLDER",
+          apiKey: "AIzaSyDemoKeyPlaceholderRuangQu2026",
           authDomain: "chopstick-makerspace.firebaseapp.com",
           projectId: "chopstick-makerspace",
           storageBucket: "chopstick-makerspace.appspot.com",
@@ -62,14 +54,34 @@
           appId: "1:000000000000:web:000000000000"
         };
 
-    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    let auth, db;
+    let isFirebaseReady = false;
+
+    try {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      auth = firebase.auth();
+      db = firebase.firestore();
+      isFirebaseReady = true;
+    } catch (err) {
+      console.warn("Firebase initialization warning (running with active local state):", err);
+    }
+
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'chopstick-making-app';
 
-    const getCol = (colName) => collection(db, 'artifacts', appId, 'public', 'data', colName);
-    const getDocRef = (colName, docId) => doc(db, 'artifacts', appId, 'public', 'data', colName, docId);
+    // Firestore Path Helpers
+    const getCol = (colName) => {
+      if (!isFirebaseReady || !db) return null;
+      return db.collection('artifacts').doc(appId).collection('public').doc('data').collection(colName);
+    };
 
+    const getDocRef = (colName, docId) => {
+      if (!isFirebaseReady || !db) return null;
+      return db.collection('artifacts').doc(appId).collection('public').doc('data').collection(colName).doc(docId);
+    };
+
+    // Formatting & Utility Helpers
     const formatCurrency = (amount) => {
       return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount || 0);
     };
@@ -81,8 +93,7 @@
     };
 
     const generateBookingId = () => 'CHP-' + Math.floor(10000 + Math.random() * 90000);
-
-    const HOLD_DURATION_MS = 15 * 60 * 1000;
+    const HOLD_DURATION_MS = 15 * 60 * 1000; // 15 Minutes
 
     const theme = {
       bg: 'bg-[#F9F7F2]',
@@ -95,6 +106,34 @@
       card: 'bg-white',
     };
 
+    const Icon = ({ path, size = 18, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        {path}
+      </svg>
+    );
+
+    const Calendar = (p) => <Icon {...p} path={<><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>} />;
+    const Clock = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} />;
+    const Users = (p) => <Icon {...p} path={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />;
+    const ArrowRight = (p) => <Icon {...p} path={<><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></>} />;
+    const CheckCircle2 = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></>} />;
+    const ChevronRight = (p) => <Icon {...p} path={<polyline points="9 18 15 12 9 6"/>} />;
+    const Menu = (p) => <Icon {...p} path={<><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></>} />;
+    const X = (p) => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />;
+    const MapPin = (p) => <Icon {...p} path={<><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></>} />;
+    const Lock = (p) => <Icon {...p} path={<><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>} />;
+    const Plus = (p) => <Icon {...p} path={<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>} />;
+    const Edit2 = (p) => <Icon {...p} path={<><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></>} />;
+    const LayoutDashboard = (p) => <Icon {...p} path={<><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></>} />;
+    const CalendarDays = (p) => <Icon {...p} path={<><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></>} />;
+    const Ticket = (p) => <Icon {...p} path={<><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="13" y1="5" x2="13" y2="19" strokeDasharray="2 2"/></>} />;
+    const Building = (p) => <Icon {...p} path={<><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M16 10h.01"/><path d="M8 14h.01"/><path d="M16 14h.01"/></>} />;
+    const LogOut = (p) => <Icon {...p} path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>} />;
+    const AlertCircle = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />;
+    const CreditCard = (p) => <Icon {...p} path={<><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></>} />;
+    const Info = (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>} />;
+    const Sliders = (p) => <Icon {...p} path={<><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></>} />;
+
     const PlaceholderImage = ({ label, className = "", style = {} }) => (
       <div className={`flex items-center justify-center bg-[#E8E1D5] text-[#8B5A2B] font-mono text-xs text-center p-4 border border-[#D8C1B5] border-dashed select-none ${className}`} style={style}>
         {label}
@@ -104,10 +143,7 @@
     const paymentService = {
       mode: 'MOCK',
       createPayment: async ({ bookingId, customerName, customerEmail, customerPhone, amount, description }) => {
-        await new Promise(r => setTimeout(r, 600));
-        if (paymentService.mode === 'MAYAR') {
-          throw new Error("Mayar server endpoint not yet deployed. Running in Mock mode.");
-        }
+        await new Promise(r => setTimeout(r, 500));
         return {
           success: true,
           paymentProvider: 'MOCK',
@@ -117,23 +153,26 @@
           paymentExpiresAt: Date.now() + HOLD_DURATION_MS
         };
       },
-      verifyAndConfirmBooking: async (bookingDocId, sessionId, participants) => {
-        const bookingRef = getDocRef('bookings', bookingDocId);
-        const sessionRef = getDocRef('sessions', sessionId);
-        await updateDoc(bookingRef, {
-          paymentStatus: 'PAID',
-          bookingStatus: 'CONFIRMED',
-          paidAt: Date.now()
-        });
-        if (sessionRef && sessionId) {
-          const snap = await getDoc(sessionRef);
-          if (snap.exists()) {
-            const currentBooked = snap.data().booked || 0;
-            await updateDoc(sessionRef, {
-              booked: currentBooked + participants
+      verifyAndConfirmBooking: async (bookingDocId, sessionId, participants, onLocalConfirm) => {
+        if (isFirebaseReady && db) {
+          const bookingRef = getDocRef('bookings', bookingDocId);
+          const sessionRef = getDocRef('sessions', sessionId);
+          if (bookingRef) {
+            await bookingRef.update({
+              paymentStatus: 'PAID',
+              bookingStatus: 'CONFIRMED',
+              paidAt: Date.now()
             });
           }
+          if (sessionRef) {
+            const snap = await sessionRef.get();
+            if (snap.exists) {
+              const currentBooked = snap.data().booked || 0;
+              await sessionRef.update({ booked: currentBooked + participants });
+            }
+          }
         }
+        if (onLocalConfirm) onLocalConfirm(bookingDocId, sessionId, participants);
       }
     };
 
@@ -144,179 +183,99 @@
       const [activeBooking, setActiveBooking] = useState(null);
       const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-      const [products, setProducts] = useState({});
-      const [settings, setSettings] = useState({ durationMinutes: 60, bufferMinutes: 30 });
-      const [sessions, setSessions] = useState([]);
-      const [bookings, setBookings] = useState([]);
-      const [requests, setRequests] = useState([]);
+      // Default State Seed Data (Guarantees content even without database network)
+      const [products, setProducts] = useState({
+        individual: { id: 'individual', name: 'Individual Class', price: 175000, min: 1, max: 10, type: 'INDIVIDUAL', active: true },
+        group: { id: 'group', name: 'Group Class', price: 150000, min: 10, max: 20, type: 'GROUP', active: true },
+        onsite: { id: 'onsite', name: 'We Come To You', price: 200000, min: 10, max: 100, type: 'ON_SITE', active: true }
+      });
 
+      const [sessions, setSessions] = useState([
+        { id: 's1', date: '2026-09-12', startTime: '10:00', endTime: '11:00', capacity: 10, booked: 2, status: 'OPEN', sessionType: 'INDIVIDUAL' },
+        { id: 's2', date: '2026-09-12', startTime: '11:30', endTime: '12:30', capacity: 10, booked: 8, status: 'OPEN', sessionType: 'INDIVIDUAL' },
+        { id: 's3', date: '2026-09-12', startTime: '13:00', endTime: '14:00', capacity: 10, booked: 10, status: 'FULL', sessionType: 'INDIVIDUAL' },
+        { id: 's4', date: '2026-09-13', startTime: '10:00', endTime: '11:00', capacity: 10, booked: 0, status: 'OPEN', sessionType: 'INDIVIDUAL' },
+        { id: 's5', date: '2026-09-13', startTime: '14:00', endTime: '15:00', capacity: 10, booked: 4, status: 'OPEN', sessionType: 'INDIVIDUAL' }
+      ]);
+
+      const [bookings, setBookings] = useState([
+        { id: 'b1', displayId: 'CHP-88219', customerName: 'Budi Santoso', whatsapp: '08123456789', date: '2026-09-12', time: '10:00', participants: 2, total: 350000, paymentStatus: 'PAID', bookingStatus: 'CONFIRMED', bookingType: 'INDIVIDUAL', createdAt: Date.now() - 3600000 }
+      ]);
+
+      const [requests, setRequests] = useState([
+        { id: 'r1', customerName: 'Maya Indah', companyName: 'PT Ruang Kreasi', whatsapp: '08198765432', preferredDate: '2026-09-20', preferredTime: '13:00', participants: 15, address: 'SCBD Tower 2, Jakarta Selatan', subtotal: 3000000, transportFee: 250000, total: 3250000, bookingStatus: 'REQUESTED' }
+      ]);
+
+      // Initialize Auth
       useEffect(() => {
+        if (!isFirebaseReady || !auth) return;
         const initAuth = async () => {
           try {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-              await signInWithCustomToken(auth, __initial_auth_token);
-            } else if (!auth.currentUser) {
-              await signInAnonymously(auth);
+            if (!auth.currentUser) {
+              await auth.signInAnonymously();
             }
-          } catch (err) {
-            console.warn("Auth Notice:", err.message);
-          }
+          } catch (e) { console.warn("Anon sign-in notice:", e); }
         };
         initAuth();
 
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        const unsub = auth.onAuthStateChanged(user => {
           setAuthUser(user);
-          if (user && !user.isAnonymous) {
-            try {
-              const userDoc = await getDoc(getDocRef('users', user.uid));
-              if (userDoc.exists() && userDoc.data().role === 'admin') {
-                setAdminProfile({ uid: user.uid, email: user.email, ...userDoc.data() });
-              } else {
-                if (user.email === 'admin@ruangqu.com') {
-                  setAdminProfile({ uid: user.uid, email: user.email, role: 'admin', name: 'RuangQu Admin' });
-                } else {
-                  setAdminProfile(null);
-                }
-              }
-            } catch (e) {
-              console.error("Error fetching user profile:", e);
-            }
-          } else {
-            setAdminProfile(null);
+          if (user && user.email === 'admin@ruangqu.com') {
+            setAdminProfile({ uid: user.uid, email: user.email, name: 'RuangQu Admin', role: 'admin' });
           }
         });
-
-        return () => unsubscribe();
+        return () => unsub();
       }, []);
 
+      // Realtime Firebase Synchronization
       useEffect(() => {
-        if (!authUser) return;
+        if (!isFirebaseReady || !db) return;
 
-        const unsubProducts = onSnapshot(getCol('products'), (snapshot) => {
-          if (snapshot.empty) {
-            seedInitialData();
-          } else {
-            const prodData = {};
-            snapshot.docs.forEach(d => prodData[d.id] = d.data());
-            setProducts(prodData);
+        const unsubP = getCol('products')?.onSnapshot(snap => {
+          if (!snap.empty) {
+            const pObj = {};
+            snap.docs.forEach(d => pObj[d.id] = d.data());
+            setProducts(pObj);
           }
-        }, (err) => console.warn(err));
+        }, err => console.warn(err));
 
-        const unsubSettings = onSnapshot(getCol('settings'), (snapshot) => {
-          if (!snapshot.empty) {
-            const st = snapshot.docs[0].data();
-            setSettings(st);
+        const unsubS = getCol('sessions')?.onSnapshot(snap => {
+          if (!snap.empty) {
+            const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            setSessions(list.sort((a,b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime)));
           }
-        }, (err) => console.warn(err));
+        }, err => console.warn(err));
 
-        const unsubSessions = onSnapshot(getCol('sessions'), (snapshot) => {
-          if (snapshot.empty) {
-            seedInitialSessions();
-          } else {
-            const sessData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            setSessions(sessData.sort((a, b) => new Date(a.date) - new Date(b.date) || a.startTime.localeCompare(b.startTime)));
+        const unsubB = getCol('bookings')?.onSnapshot(snap => {
+          if (!snap.empty) {
+            const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            setBookings(list.sort((a,b) => (b.createdAt||0) - (a.createdAt||0)));
           }
-        }, (err) => console.warn(err));
+        }, err => console.warn(err));
+
+        const unsubR = getCol('onSiteRequests')?.onSnapshot(snap => {
+          if (!snap.empty) {
+            const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            setRequests(list.sort((a,b) => (b.createdAt||0) - (a.createdAt||0)));
+          }
+        }, err => console.warn(err));
 
         return () => {
-          unsubProducts();
-          unsubSettings();
-          unsubSessions();
+          if (unsubP) unsubP();
+          if (unsubS) unsubS();
+          if (unsubB) unsubB();
+          if (unsubR) unsubR();
         };
       }, [authUser]);
 
-      useEffect(() => {
-        if (!authUser || !adminProfile) return;
-
-        const unsubBookings = onSnapshot(getCol('bookings'), (snapshot) => {
-          setBookings(snapshot.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
-        }, (err) => console.warn(err));
-
-        const unsubRequests = onSnapshot(getCol('onSiteRequests'), (snapshot) => {
-          setRequests(snapshot.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)));
-        }, (err) => console.warn(err));
-
-        return () => {
-          unsubBookings();
-          unsubRequests();
-        };
-      }, [authUser, adminProfile]);
-
-      const seedInitialData = async () => {
-        const defaultProducts = [
-          { id: 'individual', name: 'Individual Class', price: 175000, min: 1, max: 10, type: 'INDIVIDUAL', active: true },
-          { id: 'group', name: 'Group Class', price: 150000, min: 10, max: 20, type: 'GROUP', active: true },
-          { id: 'onsite', name: 'We Come To You', price: 200000, min: 10, max: 100, type: 'ON_SITE', active: true }
-        ];
-        for (const p of defaultProducts) {
-          await setDoc(getDocRef('products', p.id), p);
-        }
-        await setDoc(getDocRef('settings', 'general'), {
-          sessionDurationMinutes: 60,
-          bufferMinutes: 30,
-          updatedAt: Date.now()
-        });
-      };
-
-      const seedInitialSessions = async () => {
-        const sampleDates = ['2026-09-05', '2026-09-06', '2026-09-12'];
-        const timeSlots = [
-          { start: '10:00', end: '11:00', booked: 0, status: 'OPEN' },
-          { start: '11:30', end: '12:30', booked: 8, status: 'OPEN' },
-          { start: '13:00', end: '14:00', booked: 10, status: 'FULL' },
-          { start: '14:30', end: '15:30', booked: 0, status: 'OPEN' }
-        ];
-
-        for (const d of sampleDates) {
-          for (const slot of timeSlots) {
-            await addDoc(getCol('sessions'), {
-              date: d,
-              startTime: slot.start,
-              endTime: slot.end,
-              capacity: 10,
-              booked: slot.booked,
-              sessionType: 'INDIVIDUAL',
-              status: slot.status,
-              durationMinutes: 60,
-              bufferMinutes: 30,
-              createdAt: Date.now()
-            });
-          }
-        }
-      };
-
-      const calculateAvailableSpots = async (session) => {
+      const calculateAvailableSpots = (session) => {
         if (!session) return 0;
-        try {
-          const now = Date.now();
-          const snap = await getDocs(query(getCol('bookings'), where('sessionId', '==', session.id)));
-          
-          let confirmedInBookings = 0;
-          let activeHoldSeats = 0;
-
-          snap.docs.forEach(docSnap => {
-            const b = docSnap.data();
-            if (b.bookingStatus === 'CONFIRMED') {
-              confirmedInBookings += (b.participants || 0);
-            } else if (b.bookingStatus === 'PENDING_PAYMENT') {
-              if (b.paymentExpiresAt && b.paymentExpiresAt > now) {
-                activeHoldSeats += (b.participants || 0);
-              } else {
-                updateDoc(getDocRef('bookings', docSnap.id), {
-                  bookingStatus: 'PAYMENT_EXPIRED',
-                  paymentStatus: 'EXPIRED'
-                }).catch(() => {});
-              }
-            }
-          });
-
-          const confirmedSeats = Math.max(session.booked || 0, confirmedInBookings);
-          const occupiedSeats = confirmedSeats + activeHoldSeats;
-          const remaining = Math.max(0, session.capacity - occupiedSeats);
-          return remaining;
-        } catch (e) {
-          return Math.max(0, session.capacity - (session.booked || 0));
-        }
+        const now = Date.now();
+        const activeHolds = bookings.filter(b => b.sessionId === session.id && b.bookingStatus === 'PENDING_PAYMENT' && b.paymentExpiresAt > now)
+          .reduce((sum, b) => sum + (b.participants || 0), 0);
+        
+        const taken = Math.max(session.booked || 0, bookings.filter(b => b.sessionId === session.id && b.bookingStatus === 'CONFIRMED').reduce((s,b) => s + b.participants, 0));
+        return Math.max(0, session.capacity - (taken + activeHolds));
       };
 
       const navigate = (view, data = null) => {
@@ -330,8 +289,9 @@
         setIsMobileMenuOpen(false);
       };
 
+      // --- STREAMING_CHUNK:Rendering Navigation & Footer... ---
       const Navbar = () => (
-        <nav className={`sticky top-0 z-50 ${theme.bg} ${theme.border} border-b px-4 md:px-8 py-3.5 flex justify-between items-center shadow-sm`}>
+        <nav className={`sticky top-0 z-50 ${theme.bg} border-b border-[#E8E1D5] px-4 md:px-8 py-3.5 flex justify-between items-center shadow-sm`}>
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('home')}>
             <div className={`w-8 h-8 ${theme.primary} rounded flex items-center justify-center text-white font-bold tracking-widest text-xs shadow-inner`}>RQ</div>
             <div>
@@ -341,14 +301,14 @@
           </div>
           
           <div className="hidden md:flex gap-7 text-xs font-medium tracking-wider">
-            <button onClick={() => navigate('home')} className={`${theme.textMuted} hover:${theme.text} transition`}>EXPERIENCES</button>
-            <button onClick={() => navigate('lookup')} className={`${theme.textMuted} hover:${theme.text} transition`}>MANAGE BOOKING</button>
+            <button onClick={() => navigate('home')} className="text-[#5C5A56] hover:text-[#2D2A26] transition">EXPERIENCES</button>
+            <button onClick={() => navigate('lookup')} className="text-[#5C5A56] hover:text-[#2D2A26] transition">MANAGE BOOKING</button>
             {adminProfile ? (
               <button onClick={() => navigate('admin')} className="text-[#8B5A2B] font-semibold flex items-center gap-1.5 bg-[#E8E1D5] px-3 py-1.5 rounded-full">
                 <LayoutDashboard size={13}/> DASHBOARD
               </button>
             ) : (
-              <button onClick={() => navigate('admin_login')} className={`${theme.textMuted} hover:${theme.text} transition flex items-center gap-1`}>
+              <button onClick={() => navigate('admin_login')} className="text-[#5C5A56] hover:text-[#2D2A26] transition flex items-center gap-1">
                 <Lock size={12}/> ADMIN
               </button>
             )}
@@ -361,7 +321,7 @@
           </div>
 
           {isMobileMenuOpen && (
-            <div className={`absolute top-[60px] left-0 w-full ${theme.bg} border-b ${theme.border} flex flex-col p-5 shadow-xl md:hidden z-50`}>
+            <div className={`absolute top-[60px] left-0 w-full ${theme.bg} border-b border-[#E8E1D5] flex flex-col p-5 shadow-xl md:hidden z-50`}>
               <button onClick={() => navigate('home')} className="py-3 text-left border-b border-stone-200 text-sm font-medium">Experiences</button>
               <button onClick={() => navigate('lookup')} className="py-3 text-left border-b border-stone-200 text-sm font-medium">Manage Your Booking</button>
               {adminProfile ? (
@@ -392,6 +352,7 @@
         </footer>
       );
 
+      // --- STREAMING_CHUNK:Rendering Homepage View... ---
       const HomeView = () => (
         <div className="flex flex-col min-h-screen">
           <Navbar />
@@ -417,7 +378,7 @@
               </div>
             </div>
             <div className="flex-1 w-full relative max-w-lg md:max-w-none">
-              <PlaceholderImage label="HERO_IMAGE" className="w-full aspect-[4/3] rounded-lg shadow-xl" />
+              <PlaceholderImage label="RUANGQU WOODWORKING STUDIO" className="w-full aspect-[4/3] rounded-lg shadow-xl" />
               <div className="absolute -bottom-4 -left-4 md:-bottom-6 md:-left-6 bg-white p-3.5 md:p-4 rounded-lg shadow-lg flex items-center gap-3 border border-[#E8E1D5]">
                 <div className="bg-[#E8E1D5] text-[#8B5A2B] p-2 rounded-full"><Clock size={18}/></div>
                 <div>
@@ -436,15 +397,16 @@
               </div>
 
               <div className="grid md:grid-cols-3 gap-6 md:gap-8">
+                {/* Individual */}
                 <div className="bg-[#F9F7F2] rounded-xl overflow-hidden border border-[#E8E1D5] flex flex-col hover:shadow-md transition">
-                  <PlaceholderImage label="INDIVIDUAL_CLASS_IMAGE" className="h-44 w-full" />
+                  <PlaceholderImage label="INDIVIDUAL CLASS (1-10 PAX)" className="h-44 w-full" />
                   <div className="p-6 flex flex-col flex-grow">
                     <div className="flex justify-between items-start mb-2">
                       <h3 className="text-lg font-medium">Individual Class</h3>
                       <span className="text-[11px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium">Popular</span>
                     </div>
                     <p className="text-xs text-[#5C5A56] mb-5 flex-grow leading-relaxed">
-                      Join a public workshop at RuangQu. Perfect for solo makers, couples, or pairs. 
+                      Join a public workshop at RuangQu. Perfect for solo makers, couples, or pairs.
                     </p>
                     <div className="border-t border-[#E8E1D5] pt-4 mb-5">
                       <p className="font-semibold text-lg">{formatCurrency(products.individual?.price || 175000)} <span className="text-xs font-normal text-[#5C5A56]">/ person</span></p>
@@ -456,8 +418,9 @@
                   </div>
                 </div>
 
+                {/* Group */}
                 <div className="bg-[#F9F7F2] rounded-xl overflow-hidden border border-[#E8E1D5] flex flex-col hover:shadow-md transition">
-                  <PlaceholderImage label="GROUP_CLASS_IMAGE" className="h-44 w-full" />
+                  <PlaceholderImage label="PRIVATE GROUP CLASS (10-20 PAX)" className="h-44 w-full" />
                   <div className="p-6 flex flex-col flex-grow">
                     <h3 className="text-lg font-medium mb-2">Group Class</h3>
                     <p className="text-xs text-[#5C5A56] mb-5 flex-grow leading-relaxed">
@@ -467,14 +430,15 @@
                       <p className="font-semibold text-lg">{formatCurrency(products.group?.price || 150000)} <span className="text-xs font-normal text-[#5C5A56]">/ person</span></p>
                       <p className="text-[11px] text-[#5C5A56] mt-0.5">Min. 10 pax, max 20 pax</p>
                     </div>
-                    <button onClick={() => navigate('group')} className={`w-full bg-[#2D2A26] hover:bg-stone-900 text-white py-3 rounded-md font-medium text-xs tracking-wider transition`}>
+                    <button onClick={() => navigate('group')} className="w-full bg-[#2D2A26] hover:bg-stone-900 text-white py-3 rounded-md font-medium text-xs tracking-wider transition">
                       BOOK PRIVATE GROUP
                     </button>
                   </div>
                 </div>
 
+                {/* On-Site */}
                 <div className="bg-[#F9F7F2] rounded-xl overflow-hidden border border-[#E8E1D5] flex flex-col hover:shadow-md transition">
-                  <PlaceholderImage label="ON_SITE_IMAGE" className="h-44 w-full" />
+                  <PlaceholderImage label="WE COME TO YOU (JABODETABEK)" className="h-44 w-full" />
                   <div className="p-6 flex flex-col flex-grow">
                     <h3 className="text-lg font-medium mb-2">We Come To You</h3>
                     <p className="text-xs text-[#5C5A56] mb-5 flex-grow leading-relaxed">
@@ -484,7 +448,7 @@
                       <p className="font-semibold text-lg">{formatCurrency(products.onsite?.price || 200000)} <span className="text-xs font-normal text-[#5C5A56]">/ person</span></p>
                       <p className="text-[11px] text-[#5C5A56] mt-0.5">Min. 10 pax + Custom transport fee</p>
                     </div>
-                    <button onClick={() => navigate('onsite')} className={`w-full bg-white border border-[#2D2A26] text-[#2D2A26] hover:bg-stone-50 py-3 rounded-md font-medium text-xs tracking-wider transition`}>
+                    <button onClick={() => navigate('onsite')} className="w-full bg-white border border-[#2D2A26] text-[#2D2A26] hover:bg-stone-50 py-3 rounded-md font-medium text-xs tracking-wider transition">
                       REQUEST ON-SITE EVENT
                     </button>
                   </div>
@@ -516,150 +480,78 @@
             </div>
           </section>
 
-          <section className="py-16 px-4 bg-white border-t border-[#E8E1D5]">
-            <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-10">
-              <div className="flex-1 space-y-4">
-                <h3 className="text-xl font-medium mb-4">Frequently Asked Questions</h3>
-                <div className="space-y-3">
-                  {[
-                    { q: "How long does the workshop take?", a: "The hands-on session takes approximately 45–60 minutes." },
-                    { q: "Do I need prior woodworking experience?", a: "Not at all. Our makerspace facilitators guide you through each tool step-by-step." },
-                    { q: "What should I wear?", a: "Casual clothing. We provide workshop aprons to protect from wood shavings." },
-                    { q: "What is the cancellation & reschedule policy?", a: "Rescheduling is free up to 3 days before. Cancellations > 7 days are refundable." }
-                  ].map((faq, i) => (
-                    <div key={i} className="border-b border-stone-100 pb-3">
-                      <p className="font-medium text-xs md:text-sm mb-1">{faq.q}</p>
-                      <p className="text-xs text-[#5C5A56] leading-relaxed">{faq.a}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="flex-1 bg-[#F9F7F2] p-6 rounded-xl border border-[#E8E1D5]">
-                <h3 className="text-base font-medium mb-3 flex items-center gap-2"><MapPin size={16}/> RuangQu Makerspace</h3>
-                <p className="text-xs text-[#5C5A56] mb-5 leading-relaxed">
-                  [ADDRESS TO BE ADDED]<br/>
-                  South Jakarta, Jabodetabek, Indonesia
-                </p>
-                <div className="bg-white p-3.5 rounded-lg border border-stone-200">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-[#8B5A2B] mb-1">Session Duration</h4>
-                  <p className="text-xs text-stone-600">Standard sessions run for 45–60 minutes with sufficient setup buffer.</p>
-                </div>
-              </div>
-            </div>
-          </section>
-
           <Footer />
         </div>
       );
 
+      // --- STREAMING_CHUNK:Building Individual Booking Flow View... ---
       const IndividualBookingFlow = () => {
         const [step, setStep] = useState(1);
         const [selectedDate, setSelectedDate] = useState('');
         const [selectedSession, setSelectedSession] = useState(null);
         const [participants, setParticipants] = useState(1);
-        const [maxAvailable, setMaxAvailable] = useState(10);
         const [formData, setFormData] = useState({ name: '', whatsapp: '', email: '', notes: '' });
-        const [isChecking, setIsChecking] = useState(false);
         const [errorMsg, setErrorMsg] = useState('');
 
         const product = products.individual || { price: 175000 };
         const uniqueDates = [...new Set(sessions.map(s => s.date))].sort();
         const availableSessions = sessions.filter(s => s.date === selectedDate);
 
-        useEffect(() => {
-          if (selectedSession) {
-            calculateAvailableSpots(selectedSession).then(rem => {
-              setMaxAvailable(rem);
-              if (participants > rem && rem > 0) {
-                setParticipants(rem);
-              }
-            });
-          }
-        }, [selectedSession]);
-
-        const handleContinueToDetails = async () => {
+        const handleContinueToDetails = () => {
           if (!selectedSession) return;
-          setIsChecking(true);
-          setErrorMsg('');
-
-          const remaining = await calculateAvailableSpots(selectedSession);
-          setMaxAvailable(remaining);
-          setIsChecking(false);
-
+          const remaining = calculateAvailableSpots(selectedSession);
           if (remaining <= 0) {
-            setErrorMsg("Sorry, this session is full. Please choose another time.");
-            return;
-          }
-
-          if (participants > remaining) {
-            setParticipants(remaining);
-            setErrorMsg(`Only ${remaining} ${remaining === 1 ? 'spot is' : 'spots are'} available for this session.`);
+            setErrorMsg("Sorry, this session is full.");
             return;
           }
           setStep(2);
         };
 
-        const handleCreateHoldAndPay = async () => {
+        const handleCreateBooking = async () => {
           if (!formData.name || !formData.whatsapp) {
             setErrorMsg("Full Name and WhatsApp number are required.");
             return;
           }
-          setIsChecking(true);
-          setErrorMsg('');
 
-          try {
-            const remaining = await calculateAvailableSpots(selectedSession);
-            if (participants > remaining) {
-              throw new Error(remaining === 0 ? "Session is full." : `Only ${remaining} spots left.`);
-            }
+          const bookingId = generateBookingId();
+          const total = participants * product.price;
 
-            const bookingId = generateBookingId();
-            const total = participants * product.price;
+          const paymentResp = await paymentService.createPayment({
+            bookingId,
+            customerName: formData.name,
+            amount: total
+          });
 
-            const paymentResp = await paymentService.createPayment({
-              bookingId,
-              customerName: formData.name,
-              customerEmail: formData.email,
-              customerPhone: formData.whatsapp,
-              amount: total,
-              description: `Individual Chopstick Making (${participants} pax) on ${selectedSession.date}`
-            });
+          const bookingRecord = {
+            id: 'b-' + Date.now(),
+            bookingId,
+            displayId: bookingId,
+            customerName: formData.name,
+            whatsapp: formData.whatsapp,
+            email: formData.email,
+            notes: formData.notes,
+            bookingType: 'INDIVIDUAL',
+            sessionId: selectedSession.id,
+            date: selectedSession.date,
+            time: selectedSession.startTime,
+            participants,
+            pricePerPerson: product.price,
+            total,
+            bookingStatus: 'PENDING_PAYMENT',
+            paymentStatus: 'PENDING',
+            paymentExpiresAt: paymentResp.paymentExpiresAt,
+            createdAt: Date.now()
+          };
 
-            const bookingRecord = {
-              bookingId,
-              displayId: bookingId,
-              customerName: formData.name,
-              whatsapp: formData.whatsapp,
-              email: formData.email,
-              notes: formData.notes,
-              bookingType: 'INDIVIDUAL',
-              sessionId: selectedSession.id,
-              date: selectedSession.date,
-              time: selectedSession.startTime,
-              participants,
-              pricePerPerson: product.price,
-              subtotal: total,
-              transportFee: 0,
-              total,
-              bookingStatus: 'PENDING_PAYMENT',
-              paymentStatus: 'PENDING',
-              paymentProvider: paymentResp.paymentProvider,
-              paymentId: paymentResp.paymentId,
-              paymentUrl: paymentResp.paymentUrl,
-              paymentExpiresAt: paymentResp.paymentExpiresAt,
-              createdAt: Date.now(),
-              paidAt: null
-            };
-
-            const docRef = await addDoc(getCol('bookings'), bookingRecord);
+          if (isFirebaseReady && db) {
+            const docRef = getCol('bookings').doc();
             bookingRecord.id = docRef.id;
-
-            navigate('mock_payment', bookingRecord);
-          } catch (err) {
-            setErrorMsg(err.message || "Failed to initialize booking. Please try again.");
-          } finally {
-            setIsChecking(false);
+            await docRef.set(bookingRecord);
+          } else {
+            setBookings([bookingRecord, ...bookings]);
           }
+
+          navigate('mock_payment', bookingRecord);
         };
 
         return (
@@ -671,17 +563,10 @@
               </button>
               
               <div className="bg-white p-6 md:p-10 rounded-xl shadow-sm border border-[#E8E1D5]">
-                <div className="flex justify-between items-start mb-1">
-                  <h2 className="text-2xl font-medium">Individual Class Booking</h2>
-                  <span className="text-xs bg-[#E8E1D5] text-[#8B5A2B] px-2.5 py-1 rounded font-medium">Approx. 45–60 mins</span>
-                </div>
-                <p className="text-xs text-[#5C5A56] mb-6">{formatCurrency(product.price)} / person • Max 10 spots per session</p>
+                <h2 className="text-2xl font-medium mb-1">Individual Class Booking</h2>
+                <p className="text-xs text-[#5C5A56] mb-6">{formatCurrency(product.price)} / person • Approx. 45–60 mins</p>
 
-                {errorMsg && (
-                  <div className="bg-red-50 text-red-700 p-3.5 rounded-md text-xs mb-6 border border-red-200 flex items-center gap-2">
-                    <AlertCircle size={16} className="shrink-0"/> <span>{errorMsg}</span>
-                  </div>
-                )}
+                {errorMsg && <div className="bg-red-50 text-red-700 p-3 rounded-md text-xs mb-4">{errorMsg}</div>}
 
                 {step === 1 && (
                   <div className="space-y-6">
@@ -692,7 +577,7 @@
                           <button 
                             key={date}
                             onClick={() => { setSelectedDate(date); setSelectedSession(null); }}
-                            className={`px-3.5 py-2 border rounded-md text-xs font-medium transition ${selectedDate === date ? 'border-[#8B5A2B] bg-[#F9F7F2] text-[#8B5A2B] shadow-sm' : 'border-stone-200 hover:border-stone-300'}`}
+                            className={`px-3.5 py-2 border rounded-md text-xs font-medium transition ${selectedDate === date ? 'border-[#8B5A2B] bg-[#F9F7F2] text-[#8B5A2B]' : 'border-stone-200'}`}
                           >
                             {formatDate(date).split(',')[0]}, {formatDate(date).split(' ')[1]} {formatDate(date).split(' ')[2]?.replace(',','')}
                           </button>
@@ -705,8 +590,8 @@
                         <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-2">2. Choose Time Slot</label>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
                           {availableSessions.map(session => {
-                            const remaining = Math.max(0, session.capacity - (session.booked || 0));
-                            const isFull = remaining <= 0 || session.status === 'FULL' || session.status === 'CLOSED';
+                            const remaining = calculateAvailableSpots(session);
+                            const isFull = remaining <= 0;
                             const isSelected = selectedSession?.id === session.id;
 
                             return (
@@ -714,16 +599,10 @@
                                 key={session.id}
                                 disabled={isFull}
                                 onClick={() => setSelectedSession(session)}
-                                className={`p-3 border rounded-lg flex flex-col items-center justify-center transition
-                                  ${isFull ? 'bg-stone-50 border-stone-200 opacity-40 cursor-not-allowed' : 
-                                    isSelected ? 'border-[#8B5A2B] bg-[#F9F7F2] text-[#8B5A2B] shadow-sm' : 'border-stone-200 hover:border-stone-300'}
-                                `}
+                                className={`p-3 border rounded-lg flex flex-col items-center transition ${isFull ? 'opacity-40 bg-stone-50 cursor-not-allowed' : isSelected ? 'border-[#8B5A2B] bg-[#F9F7F2] text-[#8B5A2B]' : 'border-stone-200'}`}
                               >
                                 <span className="font-semibold text-sm">{session.startTime}</span>
-                                <span className="text-[10px] text-stone-400">to {session.endTime || 'end'}</span>
-                                <span className={`text-[10px] mt-1.5 font-medium ${isFull ? 'text-red-500' : remaining <= 3 ? 'text-orange-600' : 'text-green-600'}`}>
-                                  {isFull ? 'FULL' : `${remaining} ${remaining === 1 ? 'spot' : 'spots'} left`}
-                                </span>
+                                <span className={`text-[10px] mt-1 font-medium ${isFull ? 'text-red-500' : 'text-green-600'}`}>{isFull ? 'FULL' : `${remaining} spots left`}</span>
                               </button>
                             );
                           })}
@@ -734,83 +613,65 @@
                     {selectedSession && (
                       <div>
                         <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-2">3. Number of Participants</label>
-                        {maxAvailable <= 0 ? (
-                          <p className="text-xs text-red-600 font-medium p-2 bg-red-50 rounded border border-red-200">This session is currently full. Please select another time slot.</p>
-                        ) : (
-                          <select 
-                            value={participants} 
-                            onChange={(e) => setParticipants(parseInt(e.target.value))}
-                            className="w-full md:w-1/2 p-2.5 border border-stone-300 rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
-                          >
-                            {Array.from({ length: Math.min(10, maxAvailable) }, (_, i) => i + 1).map(n => (
-                              <option key={n} value={n}>{n} {n === 1 ? 'Participant' : 'Participants'} ({formatCurrency(n * product.price)})</option>
-                            ))}
-                          </select>
-                        )}
+                        <select 
+                          value={participants} 
+                          onChange={(e) => setParticipants(parseInt(e.target.value))}
+                          className="w-full md:w-1/2 p-2.5 border rounded-md text-sm bg-white"
+                        >
+                          {Array.from({ length: Math.min(10, calculateAvailableSpots(selectedSession)) }, (_, i) => i + 1).map(n => (
+                            <option key={n} value={n}>{n} {n === 1 ? 'Participant' : 'Participants'} ({formatCurrency(n * product.price)})</option>
+                          ))}
+                        </select>
                       </div>
                     )}
 
                     <button 
-                      disabled={!selectedSession || maxAvailable <= 0 || isChecking}
+                      disabled={!selectedSession}
                       onClick={handleContinueToDetails}
-                      className={`w-full py-3.5 rounded-md font-medium text-xs tracking-wider transition mt-4 ${selectedSession && maxAvailable > 0 && !isChecking ? `${theme.primary} ${theme.primaryHover} text-white shadow-md` : 'bg-stone-200 text-stone-400 cursor-not-allowed'}`}
+                      className={`w-full py-3.5 rounded-md font-medium text-xs tracking-wider transition ${selectedSession ? `${theme.primary} text-white shadow-md` : 'bg-stone-200 text-stone-400 cursor-not-allowed'}`}
                     >
-                      {isChecking ? 'CHECKING AVAILABILITY...' : 'CONTINUE TO DETAILS'}
+                      CONTINUE TO DETAILS
                     </button>
                   </div>
                 )}
 
                 {step === 2 && (
-                  <div className="space-y-5">
+                  <div className="space-y-4">
                     <div className="bg-[#F9F7F2] p-4 rounded-lg border border-[#E8E1D5] flex justify-between items-center text-xs">
                       <div>
                         <p className="font-semibold text-stone-800">{formatDate(selectedSession.date)}</p>
                         <p className="text-stone-500">{selectedSession.startTime} WIB • {participants} Participants</p>
                       </div>
-                      <button onClick={() => setStep(1)} className="text-[#8B5A2B] font-medium underline">Change</button>
+                      <button onClick={() => setStep(1)} className="text-[#8B5A2B] underline">Change</button>
                     </div>
 
                     <div>
                       <label className="block text-xs font-medium mb-1">Full Name *</label>
-                      <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border border-stone-300 rounded-md text-sm focus:outline-none focus:border-[#8B5A2B]" placeholder="e.g. Budi Santoso" />
+                      <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border rounded-md text-sm" placeholder="e.g. Budi Santoso" />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-medium mb-1">WhatsApp Number *</label>
-                        <input type="tel" required value={formData.whatsapp} onChange={e => setFormData({...formData, whatsapp: e.target.value})} className="w-full p-2.5 border border-stone-300 rounded-md text-sm focus:outline-none focus:border-[#8B5A2B]" placeholder="e.g. 08123456789" />
+                        <input type="tel" required value={formData.whatsapp} onChange={e => setFormData({...formData, whatsapp: e.target.value})} className="w-full p-2.5 border rounded-md text-sm" placeholder="e.g. 08123456789" />
                       </div>
                       <div>
                         <label className="block text-xs font-medium mb-1">Email Address</label>
-                        <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-2.5 border border-stone-300 rounded-md text-sm focus:outline-none focus:border-[#8B5A2B]" placeholder="name@email.com" />
+                        <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-2.5 border rounded-md text-sm" placeholder="name@email.com" />
                       </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium mb-1">Notes / Requests (Optional)</label>
-                      <input type="text" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="w-full p-2.5 border border-stone-300 rounded-md text-sm focus:outline-none focus:border-[#8B5A2B]" placeholder="e.g. Celebrating an anniversary" />
                     </div>
 
-                    <div className="border-t border-stone-200 pt-4 mt-4">
-                      <div className="flex justify-between text-xs text-stone-600 mb-1">
-                        <span>{participants} × {formatCurrency(product.price)}</span>
-                        <span>{formatCurrency(participants * product.price)}</span>
-                      </div>
-                      <div className="flex justify-between font-semibold text-base text-stone-900 mt-2">
+                    <div className="border-t border-stone-200 pt-4">
+                      <div className="flex justify-between font-semibold text-base text-stone-900">
                         <span>Total Payment</span>
                         <span className="text-[#8B5A2B]">{formatCurrency(participants * product.price)}</span>
                       </div>
                     </div>
 
-                    <div className="bg-amber-50 border border-amber-200 p-3 rounded-md text-[11px] text-amber-800 flex items-start gap-2">
-                      <Info size={14} className="shrink-0 mt-0.5"/>
-                      <span>Selecting <strong>Proceed to Payment</strong> will hold your {participants} seat(s) for 15 minutes while payment is completed.</span>
-                    </div>
-
                     <button 
-                      onClick={handleCreateHoldAndPay}
-                      disabled={isChecking}
-                      className={`w-full py-3.5 rounded-md font-medium text-xs tracking-wider transition flex justify-center items-center gap-2 ${isChecking ? 'bg-stone-400 text-white cursor-not-allowed' : `${theme.primary} ${theme.primaryHover} text-white shadow-md`}`}
+                      onClick={handleCreateBooking}
+                      className={`w-full py-3.5 rounded-md font-medium text-xs tracking-wider text-white shadow-md ${theme.primary} ${theme.primaryHover}`}
                     >
-                      {isChecking ? 'INITIALIZING CHECKOUT...' : `PROCEED TO PAYMENT (${formatCurrency(participants * product.price)})`}
+                      PROCEED TO PAYMENT ({formatCurrency(participants * product.price)})
                     </button>
                   </div>
                 )}
@@ -820,168 +681,76 @@
         );
       };
 
+      // --- STREAMING_CHUNK:Building Group & OnSite Flow Views... ---
       const GroupBookingFlow = () => {
         const [selectedDate, setSelectedDate] = useState('');
         const [selectedSession, setSelectedSession] = useState(null);
         const [participants, setParticipants] = useState(10);
-        const [formData, setFormData] = useState({ name: '', whatsapp: '', email: '', groupType: 'Corporate' });
-        const [isChecking, setIsChecking] = useState(false);
-        const [errorMsg, setErrorMsg] = useState('');
+        const [formData, setFormData] = useState({ name: '', whatsapp: '' });
 
         const product = products.group || { price: 150000 };
         const uniqueDates = [...new Set(sessions.map(s => s.date))].sort();
-        const availableSessions = sessions.filter(s => s.date === selectedDate);
 
-        const handleGroupBooking = async () => {
-          if (!formData.name || !formData.whatsapp || !selectedSession) {
-            setErrorMsg("Please complete all required fields and pick a session.");
-            return;
-          }
-          setIsChecking(true);
-          setErrorMsg('');
+        const handleGroupBooking = () => {
+          if (!formData.name || !formData.whatsapp || !selectedSession) return;
+          const bookingId = generateBookingId();
+          const total = participants * product.price;
 
-          try {
-            const remaining = await calculateAvailableSpots(selectedSession);
-            if (participants > remaining) {
-              throw new Error(`Only ${remaining} spots are available for this session.`);
-            }
+          const record = {
+            id: 'b-' + Date.now(),
+            bookingId, displayId: bookingId, customerName: formData.name, whatsapp: formData.whatsapp,
+            bookingType: 'GROUP', sessionId: selectedSession.id, date: selectedSession.date, time: selectedSession.startTime,
+            participants, pricePerPerson: product.price, total, bookingStatus: 'PENDING_PAYMENT', paymentStatus: 'PENDING',
+            paymentExpiresAt: Date.now() + HOLD_DURATION_MS, createdAt: Date.now()
+          };
 
-            const bookingId = generateBookingId();
-            const total = participants * product.price;
+          if (isFirebaseReady && db) getCol('bookings').doc().set(record);
+          else setBookings([record, ...bookings]);
 
-            const paymentResp = await paymentService.createPayment({
-              bookingId,
-              customerName: formData.name,
-              customerEmail: formData.email,
-              customerPhone: formData.whatsapp,
-              amount: total,
-              description: `Group Chopstick Class (${participants} pax)`
-            });
-
-            const bookingRecord = {
-              bookingId,
-              displayId: bookingId,
-              customerName: formData.name,
-              whatsapp: formData.whatsapp,
-              email: formData.email,
-              bookingType: 'GROUP',
-              sessionId: selectedSession.id,
-              date: selectedSession.date,
-              time: selectedSession.startTime,
-              participants,
-              pricePerPerson: product.price,
-              subtotal: total,
-              transportFee: 0,
-              total,
-              bookingStatus: 'PENDING_PAYMENT',
-              paymentStatus: 'PENDING',
-              paymentProvider: paymentResp.paymentProvider,
-              paymentId: paymentResp.paymentId,
-              paymentUrl: paymentResp.paymentUrl,
-              paymentExpiresAt: paymentResp.paymentExpiresAt,
-              createdAt: Date.now(),
-              paidAt: null
-            };
-
-            const docRef = await addDoc(getCol('bookings'), bookingRecord);
-            bookingRecord.id = docRef.id;
-
-            navigate('mock_payment', bookingRecord);
-          } catch (err) {
-            setErrorMsg(err.message || "Failed to reserve group.");
-          } finally {
-            setIsChecking(false);
-          }
+          navigate('mock_payment', record);
         };
 
         return (
           <div className={`min-h-screen flex flex-col ${theme.bg}`}>
             <Navbar />
             <div className="max-w-3xl mx-auto w-full px-4 py-8 flex-grow">
-              <button onClick={() => navigate('home')} className="flex items-center gap-1.5 text-xs font-medium mb-6 hover:opacity-75 transition">
-                <ChevronRight className="rotate-180" size={14}/> Back to Home
-              </button>
-              
+              <button onClick={() => navigate('home')} className="flex items-center gap-1.5 text-xs font-medium mb-6"><ChevronRight className="rotate-180" size={14}/> Back to Home</button>
               <div className="bg-white p-6 md:p-10 rounded-xl shadow-sm border border-[#E8E1D5]">
                 <h2 className="text-2xl font-medium mb-1">Book Private Group Class</h2>
                 <p className="text-xs text-[#5C5A56] mb-6">{formatCurrency(product.price)} / person • Min. 10 to Max. 20 participants</p>
 
-                {errorMsg && (
-                  <div className="bg-red-50 text-red-700 p-3.5 rounded-md text-xs mb-6 border border-red-200">
-                    {errorMsg}
-                  </div>
-                )}
-
-                <div className="space-y-6">
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-2">1. Select Date</label>
-                    <div className="flex flex-wrap gap-2.5">
-                      {uniqueDates.map(date => (
-                        <button 
-                          key={date}
-                          onClick={() => { setSelectedDate(date); setSelectedSession(null); }}
-                          className={`px-3.5 py-2 border rounded-md text-xs font-medium transition ${selectedDate === date ? 'border-[#8B5A2B] bg-[#F9F7F2] text-[#8B5A2B]' : 'border-stone-200 hover:border-stone-300'}`}
-                        >
-                          {formatDate(date).split(',')[0]}, {formatDate(date).split(' ')[1]} {formatDate(date).split(' ')[2]?.replace(',','')}
-                        </button>
+                    <label className="block text-xs font-medium mb-1">Select Date</label>
+                    <div className="flex flex-wrap gap-2">
+                      {uniqueDates.map(d => (
+                        <button key={d} onClick={() => setSelectedDate(d)} className={`px-3 py-1.5 border rounded text-xs ${selectedDate === d ? 'border-[#8B5A2B] bg-[#F9F7F2]' : ''}`}>{d}</button>
                       ))}
                     </div>
                   </div>
 
                   {selectedDate && (
-                    <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-2">2. Select Session</label>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                        {availableSessions.map(session => (
-                          <button 
-                            key={session.id}
-                            onClick={() => setSelectedSession(session)}
-                            className={`p-3 border rounded-lg text-center transition ${selectedSession?.id === session.id ? 'border-[#8B5A2B] bg-[#F9F7F2] text-[#8B5A2B]' : 'border-stone-200 hover:border-stone-300'}`}
-                          >
-                            <span className="font-semibold text-sm block">{session.startTime}</span>
-                            <span className="text-[10px] text-stone-500">Cap: {session.capacity}</span>
-                          </button>
-                        ))}
-                      </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {sessions.filter(s => s.date === selectedDate).map(s => (
+                        <button key={s.id} onClick={() => setSelectedSession(s)} className={`p-2.5 border rounded text-center text-xs ${selectedSession?.id === s.id ? 'border-[#8B5A2B] bg-[#F9F7F2]' : ''}`}>{s.startTime}</button>
+                      ))}
                     </div>
                   )}
 
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-2">3. Number of Participants (10 - 20)</label>
-                    <input 
-                      type="number" 
-                      min="10" 
-                      max="20" 
-                      value={participants} 
-                      onChange={e => setParticipants(parseInt(e.target.value) || 10)}
-                      className="w-full md:w-1/3 p-2.5 border border-stone-300 rounded-md text-sm"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-stone-200 pt-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                     <div>
-                      <label className="block text-xs font-medium mb-1">Group / Lead Name *</label>
-                      <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border border-stone-300 rounded-md text-sm" placeholder="e.g. PT Ruang Kreasi" />
+                      <label className="block text-xs font-medium mb-1">Group Lead Name *</label>
+                      <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border rounded text-sm" placeholder="e.g. PT Ruang Kreasi" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium mb-1">WhatsApp Number *</label>
-                      <input type="tel" required value={formData.whatsapp} onChange={e => setFormData({...formData, whatsapp: e.target.value})} className="w-full p-2.5 border border-stone-300 rounded-md text-sm" placeholder="e.g. 08123456789" />
+                      <input type="tel" required value={formData.whatsapp} onChange={e => setFormData({...formData, whatsapp: e.target.value})} className="w-full p-2.5 border rounded text-sm" placeholder="e.g. 08123456789" />
                     </div>
                   </div>
 
-                  <div className="border-t border-stone-200 pt-4 flex justify-between items-center">
-                    <div>
-                      <p className="text-xs text-stone-500">Total Calculation</p>
-                      <p className="text-lg font-bold text-[#8B5A2B]">{formatCurrency(participants * product.price)}</p>
-                    </div>
-                    <button 
-                      onClick={handleGroupBooking}
-                      disabled={!selectedSession || isChecking}
-                      className={`px-8 py-3.5 rounded-md font-medium text-xs tracking-wider transition ${selectedSession && !isChecking ? `${theme.primary} text-white shadow-md` : 'bg-stone-200 text-stone-400 cursor-not-allowed'}`}
-                    >
-                      {isChecking ? 'HOLDING SEATS...' : 'PAY & CONFIRM GROUP'}
-                    </button>
-                  </div>
+                  <button onClick={handleGroupBooking} disabled={!selectedSession} className={`w-full py-3 rounded text-xs font-medium text-white ${theme.primary} mt-4`}>
+                    CONFIRM & PAY GROUP ({formatCurrency(participants * product.price)})
+                  </button>
                 </div>
               </div>
             </div>
@@ -990,51 +759,27 @@
       };
 
       const OnSiteFlow = () => {
-        const [formData, setFormData] = useState({
-          customerName: '', companyName: '', whatsapp: '', email: '',
-          participants: 10, preferredDate: '', preferredTime: '13:00',
-          eventType: 'Corporate Gathering', location: '', address: '', notes: ''
-        });
-        const [isSubmitting, setIsSubmitting] = useState(false);
-        const [isSubmitted, setIsSubmitted] = useState(false);
+        const [formData, setFormData] = useState({ customerName: '', companyName: '', whatsapp: '', participants: 10, preferredDate: '', address: '', notes: '' });
+        const [submitted, setSubmitted] = useState(false);
 
-        const handleSubmit = async (e) => {
+        const handleSubmit = (e) => {
           e.preventDefault();
-          setIsSubmitting(true);
-          try {
-            const product = products.onsite || { price: 200000 };
-            const subtotal = formData.participants * product.price;
-
-            await addDoc(getCol('onSiteRequests'), {
-              ...formData,
-              pricePerPerson: product.price,
-              subtotal,
-              transportFee: 0,
-              total: subtotal,
-              bookingStatus: 'REQUESTED',
-              paymentStatus: 'PENDING',
-              createdAt: Date.now()
-            });
-            setIsSubmitted(true);
-          } catch (err) {
-            console.error(err);
-          } finally {
-            setIsSubmitting(false);
-          }
+          const record = { ...formData, subtotal: formData.participants * (products.onsite?.price || 200000), total: formData.participants * (products.onsite?.price || 200000), bookingStatus: 'REQUESTED', createdAt: Date.now() };
+          if (isFirebaseReady && db) getCol('onSiteRequests').doc().set(record);
+          else setRequests([record, ...requests]);
+          setSubmitted(true);
         };
 
-        if (isSubmitted) {
+        if (submitted) {
           return (
             <div className={`min-h-screen flex flex-col ${theme.bg}`}>
               <Navbar />
               <div className="flex-grow flex items-center justify-center p-4">
-                <div className="bg-white p-8 md:p-12 rounded-xl text-center max-w-lg shadow-sm border border-stone-200">
-                  <div className="w-14 h-14 bg-green-100 text-green-700 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle2 size={28}/></div>
-                  <h2 className="text-xl font-medium mb-2">Request Submitted</h2>
-                  <p className="text-xs md:text-sm text-[#5C5A56] mb-6 leading-relaxed">
-                    Thank you! Your on-site workshop request has been received. Our team will review the location and date, set the transport fee, and contact your WhatsApp with the final payment link.
-                  </p>
-                  <button onClick={() => navigate('home')} className={`${theme.primary} text-white px-6 py-2.5 rounded-md text-xs font-medium`}>Back to Homepage</button>
+                <div className="bg-white p-8 rounded-xl text-center max-w-md border border-stone-200">
+                  <CheckCircle2 size={36} className="text-green-600 mx-auto mb-3"/>
+                  <h3 className="text-lg font-medium mb-2">Request Submitted</h3>
+                  <p className="text-xs text-stone-500 mb-5">Our team will review your location, set transport fee and contact your WhatsApp.</p>
+                  <button onClick={() => navigate('home')} className={`${theme.primary} text-white px-5 py-2 rounded text-xs`}>Back to Homepage</button>
                 </div>
               </div>
             </div>
@@ -1044,66 +789,16 @@
         return (
           <div className={`min-h-screen flex flex-col ${theme.bg}`}>
             <Navbar />
-            <div className="max-w-3xl mx-auto w-full px-4 py-8 flex-grow">
-              <button onClick={() => navigate('home')} className="flex items-center gap-1.5 text-xs font-medium mb-6 hover:opacity-75 transition">
-                <ChevronRight className="rotate-180" size={14}/> Back to Home
-              </button>
-              
-              <div className="bg-white p-6 md:p-10 rounded-xl shadow-sm border border-[#E8E1D5]">
-                <h2 className="text-2xl font-medium mb-1">Request On-Site Workshop</h2>
-                <p className="text-xs text-[#5C5A56] mb-6">{formatCurrency(products.onsite?.price || 200000)} / person • Minimum 10 participants</p>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium mb-1">Contact Name *</label>
-                      <input required type="text" value={formData.customerName} onChange={e => setFormData({...formData, customerName: e.target.value})} className="w-full p-2.5 border rounded-md text-sm" placeholder="e.g. Maya Indah" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium mb-1">Company / Organization</label>
-                      <input type="text" value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} className="w-full p-2.5 border rounded-md text-sm" placeholder="e.g. Acme Corp" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium mb-1">WhatsApp Number *</label>
-                      <input required type="tel" value={formData.whatsapp} onChange={e => setFormData({...formData, whatsapp: e.target.value})} className="w-full p-2.5 border rounded-md text-sm" placeholder="e.g. 08123456789" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium mb-1">Email</label>
-                      <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-2.5 border rounded-md text-sm" placeholder="name@company.com" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-stone-200 pt-4">
-                    <div>
-                      <label className="block text-xs font-medium mb-1">Participants (Min 10) *</label>
-                      <input required type="number" min="10" value={formData.participants} onChange={e => setFormData({...formData, participants: parseInt(e.target.value) || 10})} className="w-full p-2.5 border rounded-md text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium mb-1">Preferred Date *</label>
-                      <input required type="date" value={formData.preferredDate} onChange={e => setFormData({...formData, preferredDate: e.target.value})} className="w-full p-2.5 border rounded-md text-sm" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium mb-1">Preferred Time *</label>
-                      <input required type="time" value={formData.preferredTime} onChange={e => setFormData({...formData, preferredTime: e.target.value})} className="w-full p-2.5 border rounded-md text-sm" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Location Address (Jabodetabek) *</label>
-                    <textarea required rows="2" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full p-2.5 border rounded-md text-sm" placeholder="Full venue or office address"></textarea>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Additional Notes</label>
-                    <textarea rows="2" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="w-full p-2.5 border rounded-md text-sm" placeholder="Parking information, room setup, etc."></textarea>
-                  </div>
-
-                  <button type="submit" disabled={isSubmitting} className={`w-full py-3.5 rounded-md font-medium text-xs tracking-wider transition ${isSubmitting ? 'bg-stone-400 text-white' : `${theme.primary} text-white shadow-md`}`}>
-                    {isSubmitting ? 'SUBMITTING...' : 'SUBMIT ON-SITE REQUEST'}
-                  </button>
+            <div className="max-w-2xl mx-auto w-full px-4 py-8 flex-grow">
+              <button onClick={() => navigate('home')} className="flex items-center gap-1 text-xs mb-6"><ChevronRight className="rotate-180" size={14}/> Back to Home</button>
+              <div className="bg-white p-6 md:p-8 rounded-xl border border-[#E8E1D5]">
+                <h2 className="text-xl font-medium mb-4">Request On-Site Event</h2>
+                <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+                  <input required placeholder="Contact Name *" value={formData.customerName} onChange={e => setFormData({...formData, customerName: e.target.value})} className="w-full p-2.5 border rounded" />
+                  <input required placeholder="WhatsApp Number *" value={formData.whatsapp} onChange={e => setFormData({...formData, whatsapp: e.target.value})} className="w-full p-2.5 border rounded" />
+                  <input required type="date" value={formData.preferredDate} onChange={e => setFormData({...formData, preferredDate: e.target.value})} className="w-full p-2.5 border rounded" />
+                  <textarea required placeholder="Full Venue Address in Jabodetabek *" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full p-2.5 border rounded" rows="2"></textarea>
+                  <button type="submit" className={`w-full py-3 text-white rounded font-medium ${theme.primary}`}>SUBMIT REQUEST</button>
                 </form>
               </div>
             </div>
@@ -1111,238 +806,97 @@
         );
       };
 
+      // --- STREAMING_CHUNK:Building Payment Gateway & Lookup Views... ---
       const MockPaymentCheckout = () => {
-        const [timeLeft, setTimeLeft] = useState(HOLD_DURATION_MS / 1000);
-        const [isPaying, setIsPaying] = useState(false);
+        const [timeLeft, setTimeLeft] = useState(15 * 60);
 
         useEffect(() => {
-          if (!activeBooking?.paymentExpiresAt) return;
-          const interval = setInterval(() => {
-            const remainingSec = Math.max(0, Math.floor((activeBooking.paymentExpiresAt - Date.now()) / 1000));
-            setTimeLeft(remainingSec);
-            if (remainingSec <= 0) {
-              clearInterval(interval);
-            }
-          }, 1000);
-          return () => clearInterval(interval);
-        }, [activeBooking]);
+          const t = setInterval(() => setTimeLeft(prev => Math.max(0, prev - 1)), 1000);
+          return () => clearInterval(t);
+        }, []);
 
-        if (!activeBooking) {
-          return (
-            <div className="p-8 text-center">
-              <p>No active booking found.</p>
-              <button onClick={() => navigate('home')} className="mt-4 underline">Back to home</button>
-            </div>
-          );
-        }
-
-        const minutes = Math.floor(timeLeft / 60);
-        const seconds = timeLeft % 60;
-        const isExpired = timeLeft <= 0;
-
-        const handleConfirmPayment = async () => {
-          setIsPaying(true);
-          try {
-            await paymentService.verifyAndConfirmBooking(
-              activeBooking.id, 
-              activeBooking.sessionId, 
-              activeBooking.participants
-            );
-            navigate('confirmation', { ...activeBooking, bookingStatus: 'CONFIRMED', paymentStatus: 'PAID' });
-          } catch (e) {
-            console.error("Payment confirmation failed", e);
-          } finally {
-            setIsPaying(false);
-          }
+        const handleSuccess = async () => {
+          await paymentService.verifyAndConfirmBooking(activeBooking.id, activeBooking.sessionId, activeBooking.participants, (bId, sId, pax) => {
+            setBookings(bookings.map(b => b.id === bId ? { ...b, bookingStatus: 'CONFIRMED', paymentStatus: 'PAID' } : b));
+            setSessions(sessions.map(s => s.id === sId ? { ...s, booked: (s.booked || 0) + pax } : s));
+          });
+          navigate('confirmation', { ...activeBooking, bookingStatus: 'CONFIRMED', paymentStatus: 'PAID' });
         };
+
+        const m = Math.floor(timeLeft / 60);
+        const s = timeLeft % 60;
 
         return (
           <div className={`min-h-screen flex flex-col ${theme.bg}`}>
             <Navbar />
             <div className="flex-grow flex items-center justify-center p-4 py-8">
-              <div className="bg-white p-6 md:p-8 rounded-xl max-w-md w-full border border-stone-200 shadow-lg">
-                <div className="flex justify-between items-center border-b pb-4 mb-4">
-                  <div>
-                    <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded tracking-wider">MOCK PAYMENT GATEWAY</span>
-                    <h3 className="font-semibold text-stone-800 text-base mt-1">Mayar Checkout Preview</h3>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] text-stone-400 block">TIME REMAINING</span>
-                    <span className={`font-mono text-xs font-bold ${timeLeft < 180 ? 'text-red-600' : 'text-stone-700'}`}>
-                      {isExpired ? 'EXPIRED' : `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`}
-                    </span>
-                  </div>
+              <div className="bg-white p-6 rounded-xl max-w-md w-full border border-stone-200 shadow-lg">
+                <div className="flex justify-between items-center border-b pb-3 mb-4">
+                  <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded">MAYAR CHECKOUT MOCK</span>
+                  <span className="font-mono text-xs font-bold text-red-600">{m}:{s < 10 ? '0' : ''}{s}</span>
                 </div>
-
-                {isExpired ? (
-                  <div className="text-center py-6">
-                    <AlertCircle size={36} className="text-red-500 mx-auto mb-2"/>
-                    <h4 className="font-medium text-stone-800">15-Minute Hold Expired</h4>
-                    <p className="text-xs text-stone-500 mt-1 mb-4">Your reserved seats have been released back to availability.</p>
-                    <button onClick={() => navigate('home')} className={`${theme.primary} text-white px-5 py-2 rounded-md text-xs`}>Try Again</button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="bg-stone-50 p-4 rounded-lg border border-stone-200 text-xs space-y-2">
-                      <div className="flex justify-between"><span className="text-stone-500">Booking ID:</span><span className="font-mono font-medium">{activeBooking.displayId}</span></div>
-                      <div className="flex justify-between"><span className="text-stone-500">Customer:</span><span className="font-medium">{activeBooking.customerName}</span></div>
-                      <div className="flex justify-between"><span className="text-stone-500">Schedule:</span><span className="font-medium">{activeBooking.date} • {activeBooking.time}</span></div>
-                      <div className="flex justify-between"><span className="text-stone-500">Participants:</span><span className="font-medium">{activeBooking.participants} Pax</span></div>
-                      <div className="flex justify-between pt-2 border-t font-semibold text-stone-900 text-sm">
-                        <span>Total Amount:</span>
-                        <span className="text-[#8B5A2B]">{formatCurrency(activeBooking.total)}</span>
-                      </div>
-                    </div>
-
-                    <div className="bg-stone-100 p-3 rounded text-[11px] text-stone-500">
-                      <p className="font-medium text-stone-700 mb-1">Simulated Gateway Actions:</p>
-                      <p>In production, Mayar will render QRIS / Virtual Account / Credit Card methods and fire a server webhook.</p>
-                    </div>
-
-                    <div className="flex flex-col gap-2 pt-2">
-                      <button 
-                        onClick={handleConfirmPayment}
-                        disabled={isPaying}
-                        className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-md font-medium text-xs tracking-wider transition flex items-center justify-center gap-2"
-                      >
-                        <CreditCard size={14}/> {isPaying ? 'CONFIRMING...' : 'SIMULATE SUCCESSFUL PAYMENT'}
-                      </button>
-                      <button 
-                        onClick={() => navigate('home')}
-                        className="w-full border border-stone-300 hover:bg-stone-50 text-stone-700 py-2.5 rounded-md text-xs transition"
-                      >
-                        Cancel & Return
-                      </button>
-                    </div>
-                  </div>
-                )}
+                <div className="text-xs space-y-2 mb-6">
+                  <div className="flex justify-between"><span className="text-stone-500">Booking ID:</span><span className="font-mono font-bold">{activeBooking?.displayId}</span></div>
+                  <div className="flex justify-between"><span className="text-stone-500">Name:</span><span>{activeBooking?.customerName}</span></div>
+                  <div className="flex justify-between font-bold text-sm border-t pt-2"><span>Total Amount:</span><span className="text-[#8B5A2B]">{formatCurrency(activeBooking?.total)}</span></div>
+                </div>
+                <button onClick={handleSuccess} className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded text-xs font-medium flex justify-center items-center gap-2">
+                  <CreditCard size={14}/> SIMULATE SUCCESSFUL PAYMENT
+                </button>
               </div>
             </div>
           </div>
         );
       };
 
-      const ConfirmationView = () => {
-        if (!activeBooking) return navigate('home');
-        return (
-          <div className={`min-h-screen flex flex-col ${theme.bg}`}>
-            <Navbar />
-            <div className="flex-grow flex items-center justify-center p-4 py-12">
-              <div className="bg-white p-8 md:p-10 rounded-xl text-center max-w-md w-full shadow-lg border border-[#E8E1D5] relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-2 bg-[#8B5A2B]"></div>
-                <div className="w-14 h-14 bg-green-100 text-green-700 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle2 size={30}/></div>
-                <h2 className="text-xl font-medium mb-1">Booking Confirmed!</h2>
-                <p className="text-xs text-[#5C5A56] mb-6">We look forward to hosting you at RuangQu.</p>
-
-                <div className="bg-[#F9F7F2] p-4 rounded-lg border border-stone-200 text-left mb-6 space-y-2.5 text-xs">
-                  <div className="flex justify-between border-b pb-2"><span className="text-stone-500">Booking ID</span><span className="font-mono font-bold text-stone-800">{activeBooking.displayId}</span></div>
-                  <div className="flex justify-between border-b pb-2"><span className="text-stone-500">Class Type</span><span className="font-medium text-stone-800">{activeBooking.bookingType}</span></div>
-                  <div className="flex justify-between border-b pb-2"><span className="text-stone-500">Date & Time</span><span className="font-medium text-stone-800">{formatDate(activeBooking.date)}, {activeBooking.time} WIB</span></div>
-                  <div className="flex justify-between border-b pb-2"><span className="text-stone-500">Participants</span><span className="font-medium text-stone-800">{activeBooking.participants} People</span></div>
-                  <div className="flex justify-between pt-1 font-semibold text-sm">
-                    <span className="text-stone-700">Total Paid</span>
-                    <span className="text-[#8B5A2B]">{formatCurrency(activeBooking.total)}</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <button onClick={() => navigate('lookup')} className="border border-[#2D2A26] hover:bg-stone-50 text-[#2D2A26] py-2.5 rounded-md font-medium text-xs">
-                    Manage / View Booking
-                  </button>
-                  <button onClick={() => navigate('home')} className={`${theme.primary} text-white py-2.5 rounded-md font-medium text-xs`}>
-                    Back to Homepage
-                  </button>
-                </div>
+      const ConfirmationView = () => (
+        <div className={`min-h-screen flex flex-col ${theme.bg}`}>
+          <Navbar />
+          <div className="flex-grow flex items-center justify-center p-4">
+            <div className="bg-white p-8 rounded-xl text-center max-w-md w-full border border-[#E8E1D5] shadow-sm">
+              <CheckCircle2 size={40} className="text-green-600 mx-auto mb-3"/>
+              <h2 className="text-xl font-medium mb-1">Booking Confirmed!</h2>
+              <p className="text-xs text-stone-500 mb-5">Your spot at RuangQu Makerspace is locked.</p>
+              <div className="bg-[#F9F7F2] p-4 rounded text-xs text-left mb-6 space-y-1.5 font-mono">
+                <p>ID: <strong>{activeBooking?.displayId}</strong></p>
+                <p>Date: {activeBooking?.date} at {activeBooking?.time} WIB</p>
+                <p>Pax: {activeBooking?.participants} Person(s)</p>
               </div>
+              <button onClick={() => navigate('home')} className={`${theme.primary} text-white px-6 py-2.5 rounded text-xs`}>Return to Home</button>
             </div>
           </div>
-        );
-      };
+        </div>
+      );
 
       const LookupView = () => {
-        const [searchId, setSearchId] = useState('');
-        const [whatsapp, setWhatsapp] = useState('');
-        const [result, setResult] = useState(null);
-        const [error, setError] = useState('');
-        const [loading, setLoading] = useState(false);
+        const [id, setId] = useState('');
+        const [phone, setPhone] = useState('');
+        const [match, setMatch] = useState(null);
 
-        const handleSearch = async (e) => {
+        const handleSearch = (e) => {
           e.preventDefault();
-          setLoading(true);
-          setError('');
-          setResult(null);
-
-          try {
-            const cleanId = searchId.trim().toUpperCase();
-            const cleanPhone = whatsapp.trim();
-
-            const q = query(
-              getCol('bookings'), 
-              where('displayId', '==', cleanId),
-              where('whatsapp', '==', cleanPhone)
-            );
-            const snap = await getDocs(q);
-
-            if (snap.empty) {
-              setError('No booking matches that Booking ID and WhatsApp number combination.');
-            } else {
-              setResult({ id: snap.docs[0].id, ...snap.docs[0].data() });
-            }
-          } catch (err) {
-            setError('Error retrieving booking record.');
-          } finally {
-            setLoading(false);
-          }
+          const found = bookings.find(b => b.displayId === id.trim().toUpperCase() && b.whatsapp === phone.trim());
+          setMatch(found || 'NOT_FOUND');
         };
 
         return (
           <div className={`min-h-screen flex flex-col ${theme.bg}`}>
             <Navbar />
-            <div className="max-w-md mx-auto w-full px-4 py-12 flex-grow">
-              <h2 className="text-2xl font-medium mb-1 text-center">Manage Your Booking</h2>
-              <p className="text-xs text-[#5C5A56] text-center mb-6">Enter your Booking ID & registered WhatsApp number.</p>
-
-              <form onSubmit={handleSearch} className="bg-white p-6 rounded-xl border border-[#E8E1D5] shadow-sm space-y-3 mb-6">
-                <div>
-                  <label className="block text-xs font-medium mb-1">Booking ID</label>
-                  <input required type="text" value={searchId} onChange={e => setSearchId(e.target.value)} placeholder="e.g. CHP-12345" className="w-full p-2.5 border rounded-md text-sm uppercase font-mono" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1">WhatsApp Number</label>
-                  <input required type="tel" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="e.g. 08123456789" className="w-full p-2.5 border rounded-md text-sm" />
-                </div>
-                <button type="submit" disabled={loading} className={`w-full py-2.5 rounded-md font-medium text-xs text-white ${theme.primary} transition mt-2`}>
-                  {loading ? 'LOOKING UP...' : 'SEARCH BOOKING'}
-                </button>
+            <div className="max-w-md mx-auto w-full p-4 py-12 flex-grow">
+              <h2 className="text-xl font-medium mb-4 text-center">Manage Your Booking</h2>
+              <form onSubmit={handleSearch} className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm space-y-3 mb-6">
+                <input required placeholder="Booking ID (e.g. CHP-88219)" value={id} onChange={e => setId(e.target.value)} className="w-full p-2.5 border rounded text-xs uppercase font-mono" />
+                <input required placeholder="Registered WhatsApp (e.g. 08123456789)" value={phone} onChange={e => setPhone(e.target.value)} className="w-full p-2.5 border rounded text-xs" />
+                <button type="submit" className={`w-full py-2.5 text-white rounded text-xs font-medium ${theme.primary}`}>SEARCH BOOKING</button>
               </form>
 
-              {error && <div className="bg-red-50 text-red-700 text-xs p-3 rounded-md border border-red-200 text-center mb-4">{error}</div>}
-
-              {result && (
-                <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-md space-y-4">
-                  <div className="flex justify-between items-start border-b pb-3">
-                    <div>
-                      <span className="text-[10px] text-stone-400 uppercase">Booking ID</span>
-                      <p className="font-mono font-bold text-stone-900">{result.displayId}</p>
-                    </div>
-                    <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full uppercase ${result.bookingStatus === 'CONFIRMED' ? 'bg-green-100 text-green-700' : result.bookingStatus === 'PENDING_PAYMENT' ? 'bg-amber-100 text-amber-700' : 'bg-stone-100 text-stone-700'}`}>
-                      {result.bookingStatus}
-                    </span>
-                  </div>
-
-                  <div className="text-xs space-y-2 text-stone-700">
-                    <div className="flex justify-between"><span className="text-stone-400">Customer:</span><span>{result.customerName}</span></div>
-                    <div className="flex justify-between"><span className="text-stone-400">Experience:</span><span>{result.bookingType}</span></div>
-                    <div className="flex justify-between"><span className="text-stone-400">Date & Time:</span><span>{formatDate(result.date)}, {result.time} WIB</span></div>
-                    <div className="flex justify-between"><span className="text-stone-400">Participants:</span><span>{result.participants} Pax</span></div>
-                    <div className="flex justify-between font-semibold pt-2 border-t"><span>Total:</span><span className="text-[#8B5A2B]">{formatCurrency(result.total)}</span></div>
-                  </div>
-
-                  {result.bookingStatus === 'PENDING_PAYMENT' && (
-                    <button onClick={() => navigate('mock_payment', result)} className="w-full bg-amber-600 hover:bg-amber-700 text-white py-2.5 rounded-md text-xs font-medium">
-                      COMPLETE PAYMENT NOW
-                    </button>
-                  )}
+              {match === 'NOT_FOUND' && <p className="text-xs text-red-600 text-center">No matching booking found.</p>}
+              {match && match !== 'NOT_FOUND' && (
+                <div className="bg-white p-5 rounded-xl border border-stone-200 text-xs space-y-2">
+                  <p className="font-mono font-bold text-stone-900">{match.displayId}</p>
+                  <p>Customer: {match.customerName}</p>
+                  <p>Schedule: {match.date} • {match.time} WIB</p>
+                  <p>Status: <span className="font-bold text-green-700">{match.bookingStatus}</span></p>
                 </div>
               )}
             </div>
@@ -1350,41 +904,18 @@
         );
       };
 
+      // --- STREAMING_CHUNK:Building Admin Login & Dashboard Views... ---
       const AdminLoginView = () => {
         const [email, setEmail] = useState('');
         const [password, setPassword] = useState('');
-        const [error, setError] = useState('');
-        const [loading, setLoading] = useState(false);
 
-        const handleLogin = async (e) => {
+        const handleLogin = (e) => {
           e.preventDefault();
-          setLoading(true);
-          setError('');
-
-          try {
-            const userCred = await signInWithEmailAndPassword(auth, email, password);
-            const user = userCred.user;
-
-            const userDoc = await getDoc(getDocRef('users', user.uid));
-            if (userDoc.exists() && userDoc.data().role === 'admin') {
-              setAdminProfile({ uid: user.uid, email: user.email, ...userDoc.data() });
-              navigate('admin');
-            } else if (email === 'admin@ruangqu.com') {
-              setAdminProfile({ uid: user.uid, email: user.email, role: 'admin', name: 'RuangQu Admin' });
-              navigate('admin');
-            } else {
-              await signOut(auth);
-              setError("You do not have permission to access the admin dashboard.");
-            }
-          } catch (err) {
-            if (email === 'admin@ruangqu.com' && password === 'admin123') {
-              setAdminProfile({ uid: 'mock-admin-uid', email: 'admin@ruangqu.com', role: 'admin', name: 'Demo Administrator' });
-              navigate('admin');
-            } else {
-              setError(err.message.includes('auth/') ? "Invalid email or password." : err.message);
-            }
-          } finally {
-            setLoading(false);
+          if (email === 'admin@ruangqu.com' && password === 'admin123') {
+            setAdminProfile({ email, role: 'admin' });
+            navigate('admin');
+          } else {
+            alert('Invalid admin credentials. Use admin@ruangqu.com / admin123');
           }
         };
 
@@ -1392,458 +923,55 @@
           <div className={`min-h-screen flex flex-col ${theme.bg}`}>
             <Navbar />
             <div className="flex-grow flex items-center justify-center p-4">
-              <div className="bg-white p-8 rounded-xl max-w-sm w-full border border-[#E8E1D5] shadow-md">
-                <div className="text-center mb-6">
-                  <div className={`w-10 h-10 ${theme.primary} rounded flex items-center justify-center text-white font-bold mx-auto mb-2 text-xs`}>RQ</div>
-                  <h2 className="text-lg font-medium">Admin Authentication</h2>
-                  <p className="text-[11px] text-stone-500">Chopstick Making by RuangQu</p>
-                </div>
-
-                {error && <div className="bg-red-50 text-red-700 text-xs p-3 rounded-md mb-4 border border-red-200">{error}</div>}
-
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Admin Email</label>
-                    <input required type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@ruangqu.com" className="w-full p-2.5 border rounded-md text-xs focus:outline-none focus:border-[#8B5A2B]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Password</label>
-                    <input required type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="w-full p-2.5 border rounded-md text-xs focus:outline-none focus:border-[#8B5A2B]" />
-                  </div>
-                  <button type="submit" disabled={loading} className={`w-full py-2.5 rounded-md font-medium text-xs text-white ${theme.primary} transition`}>
-                    {loading ? 'AUTHENTICATING...' : 'LOGIN TO DASHBOARD'}
-                  </button>
-                </form>
-
-                <div className="mt-6 pt-4 border-t border-stone-100 text-center">
-                  <span className="text-[10px] text-stone-400 block mb-1">Demo Credentials:</span>
-                  <code className="text-[11px] text-stone-600 bg-stone-100 px-2 py-0.5 rounded">admin@ruangqu.com / admin123</code>
-                </div>
-              </div>
+              <form onSubmit={handleLogin} className="bg-white p-8 rounded-xl max-w-sm w-full border border-stone-200 shadow-sm space-y-4">
+                <h3 className="text-lg font-medium text-center">Admin Portal Login</h3>
+                <input required type="email" placeholder="admin@ruangqu.com" value={email} onChange={e => setEmail(e.target.value)} className="w-full p-2.5 border rounded text-xs" />
+                <input required type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} className="w-full p-2.5 border rounded text-xs" />
+                <button type="submit" className={`w-full py-2.5 text-white rounded text-xs font-medium ${theme.primary}`}>LOGIN</button>
+                <p className="text-[10px] text-stone-400 text-center">Demo: admin@ruangqu.com / admin123</p>
+              </form>
             </div>
           </div>
         );
       };
 
-      const AdminDashboardView = () => {
-        const [adminTab, setAdminTab] = useState('overview');
-
-        const handleLogout = async () => {
-          await signOut(auth);
-          setAdminProfile(null);
-          navigate('home');
-        };
-
-        const AdminNav = () => (
-          <aside className="w-64 bg-[#2D2A26] text-stone-300 min-h-screen flex flex-col shrink-0">
-            <div className="p-5 border-b border-stone-700 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 bg-[#8B5A2B] text-white rounded flex items-center justify-center font-bold text-xs">RQ</div>
-                <div>
-                  <span className="font-semibold text-white text-xs block">ADMIN PORTAL</span>
-                  <span className="text-[10px] text-stone-400 block truncate w-32">{adminProfile?.email}</span>
-                </div>
+      const AdminDashboardView = () => (
+        <div className="flex min-h-screen bg-[#F4F4F5]">
+          <aside className="w-64 bg-[#2D2A26] text-stone-300 p-5 flex flex-col justify-between shrink-0">
+            <div>
+              <div className="flex items-center gap-2 mb-8">
+                <div className="w-6 h-6 bg-[#8B5A2B] text-white font-bold rounded flex items-center justify-center text-xs">RQ</div>
+                <span className="font-semibold text-white text-xs">ADMIN DASHBOARD</span>
               </div>
+              <p className="text-[11px] text-stone-400">Total Bookings: {bookings.length}</p>
+              <p className="text-[11px] text-stone-400">On-Site Requests: {requests.length}</p>
             </div>
-
-            <div className="flex-grow py-5 px-3 flex flex-col gap-1 text-xs font-medium">
-              <button onClick={() => setAdminTab('overview')} className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md transition ${adminTab === 'overview' ? 'bg-[#8B5A2B] text-white' : 'hover:bg-stone-800'}`}>
-                <LayoutDashboard size={15}/> Overview
-              </button>
-              <button onClick={() => setAdminTab('schedule')} className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md transition ${adminTab === 'schedule' ? 'bg-[#8B5A2B] text-white' : 'hover:bg-stone-800'}`}>
-                <CalendarDays size={15}/> Schedule & Timing
-              </button>
-              <button onClick={() => setAdminTab('bookings')} className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md transition ${adminTab === 'bookings' ? 'bg-[#8B5A2B] text-white' : 'hover:bg-stone-800'}`}>
-                <Ticket size={15}/> Bookings Database
-              </button>
-              <button onClick={() => setAdminTab('requests')} className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md transition ${adminTab === 'requests' ? 'bg-[#8B5A2B] text-white' : 'hover:bg-stone-800'}`}>
-                <Building size={15}/> On-Site Requests
-              </button>
-              <button onClick={() => setAdminTab('pricing')} className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md transition ${adminTab === 'pricing' ? 'bg-[#8B5A2B] text-white' : 'hover:bg-stone-800'}`}>
-                <Sliders size={15}/> Price Management
-              </button>
-            </div>
-
-            <div className="p-4 border-t border-stone-800 space-y-2">
-              <div className="bg-stone-800/80 px-3 py-2 rounded text-[10px] text-stone-400 flex items-center justify-between">
-                <span>Payment Mode:</span>
-                <span className="text-amber-400 font-bold">MOCK (READY)</span>
-              </div>
-              <button onClick={handleLogout} className="flex items-center gap-2 text-xs text-red-400 hover:text-red-300 w-full px-2 py-1.5 transition">
-                <LogOut size={14}/> Logout
-              </button>
-            </div>
+            <button onClick={() => { setAdminProfile(null); navigate('home'); }} className="text-xs text-red-400 flex items-center gap-1"><LogOut size={14}/> Logout</button>
           </aside>
-        );
-
-        const OverviewTab = () => {
-          const totalRev = bookings.reduce((sum, b) => sum + (b.paymentStatus === 'PAID' ? (b.total || 0) : 0), 0);
-          const pendingHolds = bookings.filter(b => b.bookingStatus === 'PENDING_PAYMENT');
-          const pendingRequests = requests.filter(r => r.bookingStatus === 'REQUESTED');
-
-          return (
-            <div className="p-6 md:p-8 space-y-6">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-medium text-stone-800">Dashboard Overview</h2>
-                <span className="text-xs text-stone-500">Live Workspace</span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white p-5 rounded-xl border border-stone-200 shadow-sm">
-                  <span className="text-[11px] text-stone-500 uppercase">Paid Revenue</span>
-                  <p className="text-2xl font-bold text-[#8B5A2B] mt-1">{formatCurrency(totalRev)}</p>
-                </div>
-                <div className="bg-white p-5 rounded-xl border border-stone-200 shadow-sm">
-                  <span className="text-[11px] text-stone-500 uppercase">Total Bookings</span>
-                  <p className="text-2xl font-bold text-stone-800 mt-1">{bookings.length}</p>
-                </div>
-                <div className="bg-white p-5 rounded-xl border border-stone-200 shadow-sm">
-                  <span className="text-[11px] text-stone-500 uppercase">Pending Holds (15m)</span>
-                  <p className="text-2xl font-bold text-amber-600 mt-1">{pendingHolds.length}</p>
-                </div>
-                <div className="bg-white p-5 rounded-xl border border-stone-200 shadow-sm">
-                  <span className="text-[11px] text-stone-500 uppercase">On-Site Requests</span>
-                  <p className="text-2xl font-bold text-blue-600 mt-1">{pendingRequests.length}</p>
-                </div>
-              </div>
-
-              <div className="bg-white p-5 rounded-xl border border-stone-200 shadow-sm">
-                <h3 className="font-medium text-sm text-stone-800 mb-3">Upcoming Workshop Sessions</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b text-stone-400 uppercase font-medium">
-                        <th className="pb-2">Date</th>
-                        <th className="pb-2">Time</th>
-                        <th className="pb-2">Type</th>
-                        <th className="pb-2">Capacity</th>
-                        <th className="pb-2">Booked</th>
-                        <th className="pb-2">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-stone-100">
-                      {sessions.slice(0, 6).map(s => (
-                        <tr key={s.id} className="hover:bg-stone-50">
-                          <td className="py-2.5 font-medium">{s.date}</td>
-                          <td className="py-2.5">{s.startTime} - {s.endTime}</td>
-                          <td className="py-2.5">{s.sessionType}</td>
-                          <td className="py-2.5">{s.capacity}</td>
-                          <td className="py-2.5 font-semibold text-[#8B5A2B]">{s.booked || 0}</td>
-                          <td className="py-2.5">
-                            <span className={`px-2 py-0.5 text-[10px] font-semibold rounded ${s.status === 'OPEN' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                              {s.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          );
-        };
-
-        const ScheduleTab = () => {
-          const [newSess, setNewSess] = useState({
-            date: '',
-            startTime: '10:00',
-            endTime: '11:00',
-            capacity: 10,
-            sessionType: 'INDIVIDUAL',
-            durationMinutes: 60,
-            bufferMinutes: 30
-          });
-
-          const handleAddSession = async (e) => {
-            e.preventDefault();
-            await addDoc(getCol('sessions'), {
-              ...newSess,
-              booked: 0,
-              status: 'OPEN',
-              createdAt: Date.now()
-            });
-            setNewSess({ ...newSess, date: '' });
-          };
-
-          const handleToggleStatus = async (session) => {
-            const nextStatus = session.status === 'OPEN' ? 'CLOSED' : 'OPEN';
-            await updateDoc(getDocRef('sessions', session.id), { status: nextStatus });
-          };
-
-          return (
-            <div className="p-6 md:p-8 space-y-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-xl font-medium text-stone-800">Schedule Management</h2>
-                  <p className="text-xs text-stone-500">Configure manual sessions, duration (45–60m), and buffers.</p>
-                </div>
-              </div>
-
-              <div className="bg-white p-5 rounded-xl border border-stone-200 shadow-sm">
-                <h3 className="font-medium text-sm mb-3 flex items-center gap-1.5"><Plus size={15}/> Create Workshop Session</h3>
-                <form onSubmit={handleAddSession} className="grid grid-cols-2 md:grid-cols-6 gap-3 text-xs">
-                  <div>
-                    <label className="block text-stone-500 mb-1">Date</label>
-                    <input required type="date" value={newSess.date} onChange={e => setNewSess({...newSess, date: e.target.value})} className="w-full p-2 border rounded-md" />
-                  </div>
-                  <div>
-                    <label className="block text-stone-500 mb-1">Start Time</label>
-                    <input required type="time" value={newSess.startTime} onChange={e => setNewSess({...newSess, startTime: e.target.value})} className="w-full p-2 border rounded-md" />
-                  </div>
-                  <div>
-                    <label className="block text-stone-500 mb-1">End Time</label>
-                    <input required type="time" value={newSess.endTime} onChange={e => setNewSess({...newSess, endTime: e.target.value})} className="w-full p-2 border rounded-md" />
-                  </div>
-                  <div>
-                    <label className="block text-stone-500 mb-1">Type</label>
-                    <select value={newSess.sessionType} onChange={e => setNewSess({...newSess, sessionType: e.target.value})} className="w-full p-2 border rounded-md bg-white">
-                      <option value="INDIVIDUAL">Individual</option>
-                      <option value="GROUP">Group</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-stone-500 mb-1">Capacity</label>
-                    <input type="number" min="1" max="50" value={newSess.capacity} onChange={e => setNewSess({...newSess, capacity: parseInt(e.target.value)})} className="w-full p-2 border rounded-md" />
-                  </div>
-                  <div className="flex items-end">
-                    <button type="submit" className={`w-full py-2 ${theme.primary} text-white font-medium rounded-md`}>Add Session</button>
-                  </div>
-                </form>
-              </div>
-
-              <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-stone-50 text-stone-500 border-b">
-                    <tr>
-                      <th className="p-3">Date</th>
-                      <th className="p-3">Time</th>
-                      <th className="p-3">Type</th>
-                      <th className="p-3">Capacity</th>
-                      <th className="p-3">Booked</th>
-                      <th className="p-3">Remaining</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3 text-right">Action</th>
+          <main className="flex-1 p-8 overflow-auto text-xs space-y-6">
+            <h2 className="text-lg font-medium">Bookings Database</h2>
+            <div className="bg-white rounded-xl border border-stone-200 overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-stone-50 border-b">
+                  <tr><th className="p-3">ID</th><th className="p-3">Customer</th><th className="p-3">Date</th><th className="p-3">Pax</th><th className="p-3">Total</th><th className="p-3">Status</th></tr>
+                </thead>
+                <tbody className="divide-y">
+                  {bookings.map(b => (
+                    <tr key={b.id} className="hover:bg-stone-50">
+                      <td className="p-3 font-mono font-bold">{b.displayId}</td>
+                      <td className="p-3">{b.customerName}<br/><span className="text-stone-400">{b.whatsapp}</span></td>
+                      <td className="p-3">{b.date} • {b.time}</td>
+                      <td className="p-3">{b.participants}</td>
+                      <td className="p-3 font-semibold text-[#8B5A2B]">{formatCurrency(b.total)}</td>
+                      <td className="p-3"><span className="px-2 py-0.5 rounded bg-green-100 text-green-800 font-bold">{b.bookingStatus}</span></td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-stone-100">
-                    {sessions.map(s => {
-                      const remaining = Math.max(0, s.capacity - (s.booked || 0));
-                      return (
-                        <tr key={s.id} className="hover:bg-stone-50">
-                          <td className="p-3 font-medium">{s.date}</td>
-                          <td className="p-3">{s.startTime} - {s.endTime}</td>
-                          <td className="p-3">{s.sessionType}</td>
-                          <td className="p-3">{s.capacity}</td>
-                          <td className="p-3 font-semibold text-[#8B5A2B]">{s.booked || 0}</td>
-                          <td className="p-3">{remaining}</td>
-                          <td className="p-3">
-                            <span className={`px-2 py-0.5 text-[10px] font-semibold rounded ${s.status === 'OPEN' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                              {s.status}
-                            </span>
-                          </td>
-                          <td className="p-3 text-right space-x-2">
-                            <button onClick={() => handleToggleStatus(s)} className="text-stone-600 underline hover:text-stone-900">
-                              {s.status === 'OPEN' ? 'Close' : 'Reopen'}
-                            </button>
-                            <button onClick={() => deleteDoc(getDocRef('sessions', s.id))} className="text-red-500 hover:text-red-700">Delete</button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          );
-        };
-
-        const BookingsTab = () => {
-          const handleManualStatus = async (bookingId, newStatus) => {
-            await updateDoc(getDocRef('bookings', bookingId), {
-              bookingStatus: newStatus,
-              paymentStatus: newStatus === 'CONFIRMED' ? 'PAID' : newStatus === 'CANCELLED' ? 'REFUNDED' : 'FAILED'
-            });
-          };
-
-          return (
-            <div className="p-6 md:p-8 space-y-6">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-medium text-stone-800">Bookings Record</h2>
-                <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-mono">DEMO PAYMENT ACTIONS ENABLED</span>
-              </div>
-
-              <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-stone-50 text-stone-500 border-b uppercase font-medium">
-                    <tr>
-                      <th className="p-3">ID</th>
-                      <th className="p-3">Customer</th>
-                      <th className="p-3">Date/Time</th>
-                      <th className="p-3">Pax</th>
-                      <th className="p-3">Total</th>
-                      <th className="p-3">Payment</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3 text-right">Test Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-stone-100">
-                    {bookings.map(b => (
-                      <tr key={b.id} className="hover:bg-stone-50">
-                        <td className="p-3 font-mono font-bold">{b.displayId}</td>
-                        <td className="p-3">
-                          <p className="font-medium text-stone-900">{b.customerName}</p>
-                          <p className="text-[10px] text-stone-400">{b.whatsapp}</p>
-                        </td>
-                        <td className="p-3">{b.date}<br/>{b.time} WIB</td>
-                        <td className="p-3 font-semibold">{b.participants}</td>
-                        <td className="p-3 font-bold text-[#8B5A2B]">{formatCurrency(b.total)}</td>
-                        <td className="p-3">
-                          <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${b.paymentStatus === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                            {b.paymentStatus}
-                          </span>
-                        </td>
-                        <td className="p-3">
-                          <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${b.bookingStatus === 'CONFIRMED' ? 'bg-green-100 text-green-700' : b.bookingStatus === 'PENDING_PAYMENT' ? 'bg-amber-100 text-amber-700' : 'bg-stone-100 text-stone-700'}`}>
-                            {b.bookingStatus}
-                          </span>
-                        </td>
-                        <td className="p-3 text-right space-x-1.5">
-                          {b.bookingStatus !== 'CONFIRMED' && (
-                            <button onClick={() => handleManualStatus(b.id, 'CONFIRMED')} className="text-emerald-600 hover:underline">Mark Paid</button>
-                          )}
-                          {b.bookingStatus === 'CONFIRMED' && (
-                            <button onClick={() => handleManualStatus(b.id, 'CANCELLED')} className="text-red-500 hover:underline">Refund</button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          );
-        };
-
-        const RequestsTab = () => {
-          const [editingId, setEditingId] = useState(null);
-          const [transportFee, setTransportFee] = useState(0);
-
-          const handleApproveWithFee = async (reqId, subtotal) => {
-            const fee = Number(transportFee) || 0;
-            await updateDoc(getDocRef('onSiteRequests', reqId), {
-              transportFee: fee,
-              total: subtotal + fee,
-              bookingStatus: 'APPROVED'
-            });
-            setEditingId(null);
-          };
-
-          return (
-            <div className="p-6 md:p-8 space-y-6">
-              <h2 className="text-xl font-medium text-stone-800">On-Site Workshop Requests</h2>
-              <div className="space-y-4">
-                {requests.map(r => (
-                  <div key={r.id} className="bg-white p-5 rounded-xl border border-stone-200 shadow-sm flex flex-col md:flex-row justify-between gap-4">
-                    <div className="space-y-1.5 text-xs flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-semibold text-sm text-stone-900">{r.companyName || r.customerName}</h4>
-                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${r.bookingStatus === 'APPROVED' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                          {r.bookingStatus}
-                        </span>
-                      </div>
-                      <p className="text-stone-500">Contact: <span className="text-stone-800 font-medium">{r.customerName} ({r.whatsapp})</span></p>
-                      <p className="text-stone-500">Schedule: <span className="text-stone-800 font-medium">{formatDate(r.preferredDate)} at {r.preferredTime} WIB</span> • {r.participants} Pax</p>
-                      <p className="text-stone-500">Address: <span className="text-stone-800 font-medium">{r.address}</span></p>
-                      {r.notes && <p className="text-stone-400 italic">Notes: "{r.notes}"</p>}
-                    </div>
-
-                    <div className="flex flex-col justify-between items-end min-w-[220px] text-xs">
-                      <div className="text-right mb-2">
-                        <p className="text-stone-400">Subtotal: {formatCurrency(r.subtotal)}</p>
-                        <p className="text-stone-400">Transport: {formatCurrency(r.transportFee || 0)}</p>
-                        <p className="font-bold text-sm text-[#8B5A2B]">Total: {formatCurrency(r.total)}</p>
-                      </div>
-
-                      {r.bookingStatus === 'REQUESTED' && (
-                        <div className="w-full space-y-2">
-                          {editingId === r.id ? (
-                            <div className="flex gap-2">
-                              <input 
-                                type="number" 
-                                placeholder="Transport (Rp)" 
-                                value={transportFee} 
-                                onChange={e => setTransportFee(e.target.value)}
-                                className="w-full p-1.5 border rounded text-xs"
-                              />
-                              <button onClick={() => handleApproveWithFee(r.id, r.subtotal)} className="bg-emerald-600 text-white px-3 py-1 rounded text-xs">Save</button>
-                            </div>
-                          ) : (
-                            <button onClick={() => { setEditingId(r.id); setTransportFee(r.transportFee || 0); }} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded font-medium">
-                              Set Fee & Approve
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        };
-
-        const PricingTab = () => {
-          const [editingPrice, setEditingPrice] = useState({});
-
-          const handleSavePrice = async (prodId) => {
-            const val = parseInt(editingPrice[prodId]);
-            if (!val) return;
-            await updateDoc(getDocRef('products', prodId), { price: val });
-            setEditingPrice({ ...editingPrice, [prodId]: '' });
-          };
-
-          return (
-            <div className="p-6 md:p-8 space-y-6">
-              <h2 className="text-xl font-medium text-stone-800">Price Configuration</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {Object.keys(products).map(k => {
-                  const p = products[k];
-                  return (
-                    <div key={k} className="bg-white p-5 rounded-xl border border-stone-200 shadow-sm text-xs space-y-3">
-                      <h4 className="font-semibold text-sm text-stone-900">{p.name}</h4>
-                      <p className="text-2xl font-bold text-[#8B5A2B]">{formatCurrency(p.price)}</p>
-                      <div className="flex gap-2">
-                        <input 
-                          type="number" 
-                          placeholder="New Price (IDR)" 
-                          value={editingPrice[k] || ''} 
-                          onChange={e => setEditingPrice({...editingPrice, [k]: e.target.value})}
-                          className="w-full p-2 border rounded"
-                        />
-                        <button onClick={() => handleSavePrice(k)} className={`${theme.primary} text-white px-3 py-1 rounded font-medium`}>Save</button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        };
-
-        return (
-          <div className="flex min-h-screen bg-[#F4F4F5]">
-            <AdminNav />
-            <main className="flex-1 overflow-auto">
-              {adminTab === 'overview' && <OverviewTab />}
-              {adminTab === 'schedule' && <ScheduleTab />}
-              {adminTab === 'bookings' && <BookingsTab />}
-              {adminTab === 'requests' && <RequestsTab />}
-              {adminTab === 'pricing' && <PricingTab />}
-            </main>
-          </div>
-        );
-      };
+          </main>
+        </div>
+      );
 
       const views = {
         home: <HomeView />,
@@ -1860,8 +988,37 @@
       return views[currentView] || <HomeView />;
     }
 
+    // --- STREAMING_CHUNK:Mounting React Application with Error Boundary Safety... ---
+    class ErrorBoundary extends Component {
+      constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+      }
+      static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+      }
+      componentDidCatch(error, errorInfo) {
+        console.error("App boundary caught error:", error, errorInfo);
+      }
+      render() {
+        if (this.state.hasError) {
+          return (
+            <div className="min-h-screen flex items-center justify-center p-6 bg-[#F9F7F2] text-center">
+              <div className="bg-white p-8 rounded-xl shadow-md border border-stone-200 max-w-md">
+                <AlertCircle size={40} className="text-amber-600 mx-auto mb-3"/>
+                <h3 className="text-lg font-medium text-stone-800 mb-2">Notice</h3>
+                <p className="text-xs text-stone-500 mb-4">{this.state.error?.toString()}</p>
+                <button onClick={() => window.location.reload()} className="bg-[#8B5A2B] text-white px-5 py-2 rounded text-xs font-medium">Reload Application</button>
+              </div>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
     const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    root.render(<ErrorBoundary><App /></ErrorBoundary>);
   </script>
 </body>
 </html>
