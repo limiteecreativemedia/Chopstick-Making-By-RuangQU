@@ -13,10 +13,18 @@ export default async function handler(req, res) {
 
   const { bookingId, customerName, customerEmail, customerPhone, amount, description } = req.body;
 
-  // Mengambil domain Vercel yang sedang diakses secara otomatis
-  const origin = req.headers.referer 
-    ? new URL(req.headers.referer).origin 
-    : 'https://chopstick-making-by-ruang-qu.vercel.app';
+  // Menangkap URL asal lengkap (termasuk subfolder /Chopstick-Making-By-RuangQU/)
+  let returnBaseUrl = 'https://chopstick-making-by-ruang-qu.vercel.app/';
+  
+  if (req.headers.referer) {
+    returnBaseUrl = req.headers.referer.split('?')[0];
+  }
+
+  if (!returnBaseUrl.endsWith('/')) {
+    returnBaseUrl += '/';
+  }
+
+  const redirectUrl = `${returnBaseUrl}?booking_id=${bookingId}&status=success`;
 
   try {
     const response = await fetch('https://api.mayar.id/hl/v1/payment/create', {
@@ -31,8 +39,7 @@ export default async function handler(req, res) {
         mobileVia: customerPhone,
         amount: Number(amount),
         description: description || `Booking Chopstick Class - ${bookingId}`,
-        // REDIRECT DIBUAT DINAMIS KE DOMAIN VERCEL
-        redirectUrl: `${origin}/?booking_id=${bookingId}&status=success`
+        redirectUrl: redirectUrl
       })
     });
 
