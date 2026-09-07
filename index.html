@@ -82,44 +82,42 @@
     };
 
     // --- INTEGRASI PEMBAYARAN MAYAR (VIA VERCEL SERVERLESS) ---
-    const paymentService = {
-      createPayment: async ({ bookingId, customerName, customerEmail, customerPhone, amount, description }) => {
-        try {
-          const response = await fetch('/api/payment', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              bookingId,
-              customerName,
-              customerEmail,
-              customerPhone,
-              amount,
-              description
-            })
-          });
+const paymentService = {
+  createPayment: async ({ bookingId, customerName, customerEmail, customerPhone, amount, description }) => {
+    try {
+      // GANTI URL DI BAWAL INI DENGAN URL VERCEL KAMU
+      const response = await fetch('https://NAMA-PROJECT-KAMU.vercel.app/api/payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          bookingId,
+          customerName,
+          customerEmail,
+          customerPhone,
+          amount,
+          description
+        })
+      });
 
-          const resData = await response.json();
+      const resData = await response.json();
 
-          if (resData.statusCode === 200 || resData.data) {
-            // Ambil link checkout resmi dari Mayar
-            const paymentUrl = resData.data.link || resData.data.url;
-            
-            // Arahkan pembeli langsung ke halaman Mayar (QRIS/Virtual Account/GoPay dll)
-            window.location.href = paymentUrl;
-            return { success: true };
-          } else {
-            alert("Gagal memproses pembayaran: " + (resData.message || "Periksa pengaturan Mayar"));
-            return { success: false };
-          }
-        } catch (err) {
-          console.error("Error Payment:", err);
-          alert("Terjadi masalah saat menghubungkan ke gateway pembayaran.");
-          return { success: false };
-        }
+      if (resData.statusCode === 200 || resData.data) {
+        const paymentUrl = resData.data.link || resData.data.url;
+        window.location.href = paymentUrl;
+        return { success: true };
+      } else {
+        alert("Gagal memproses pembayaran: " + (resData.message || "Periksa pengaturan Mayar"));
+        return { success: false };
       }
-    };
+    } catch (err) {
+      console.error("Error Payment:", err);
+      alert("Terjadi masalah saat menghubungkan ke gateway pembayaran.");
+      return { success: false };
+    }
+  }
+};
 
     // --- GENERATOR JADWAL BULANAN DENGAN POLA MINGGUAN ---
     const generateMonthlySchedule = () => {
