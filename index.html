@@ -5,25 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chopstick Making by RuangQu Makerspace</title>
   
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
+  <!-- React & ReactDOM UMD -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
+  <!-- Firebase JS SDK Compat -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
+  <!-- Babel Standalone -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
-<body class="bg-[#F9F7F2] text-[#2D2A26] font-sans antialiased relative selection:bg-[#8B5A2B] selection:text-white">
+<body class="bg-[#F9F7F2] text-[#2D2A26] font-sans antialiased selection:bg-[#8B5A2B] selection:text-white">
   
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useMemo, useRef } = React;
+    const { useState, useEffect, useMemo } = React;
 
-    // --- PEMETAAN GAMBAR LOKAL ---
+    // --- PEMETAAN GAMBAR ---
     const APP_IMAGES = {
       HERO_IMAGE: './Hero image.png',
       INDIVIDUAL_CLASS_IMAGE: './individual class.png',
@@ -33,8 +37,7 @@
       PROCESS_IMAGE_02: './hand plane.jpeg',
       PROCESS_IMAGE_03: './smooth.jpg',
       FINISHED_CHOPSTICKS_IMAGE: './oil.jpeg',
-      LOGO: './logo RuangQu.png',
-      BACKGROUND: './background.jpeg'
+      LOGO: './logo RuangQu.png'
     };
 
     // --- FIREBASE INITIALIZATION ---
@@ -65,7 +68,7 @@
     const formatDate = (dateString) => {
       if (!dateString) return '';
       const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-      return new Date(dateString).toLocaleDateString('en-US', options);
+      return new Date(dateString).toLocaleDateString('id-ID', options);
     };
 
     const generateBookingId = () => 'CHP-' + Math.floor(10000 + Math.random() * 90000);
@@ -80,6 +83,61 @@
       secondary: 'bg-[#E8E1D5]',
       border: 'border-[#E8E1D5]',
       card: 'bg-white',
+    };
+
+    // --- GENERATOR JADWAL BULANAN DENGAN POLA MINGGUAN ---
+    const generateMonthlySchedule = () => {
+      const schedule = [];
+      const daysInSeptember2026 = 30; // September 2026
+
+      // Sesi standar per hari
+      const dailySessionTemplates = [
+        { idSuffix: 's1', time: '10:00 - 11:00', type: 'INDIVIDUAL', name: 'Sesi 1 (Individual)', capacity: 10 },
+        { idSuffix: 's2', time: '11:30 - 12:30', type: 'GROUP', name: 'Sesi 2 (Group Class)', capacity: 20 },
+        { idSuffix: 's3', time: '13:00 - 14:00', type: 'INDIVIDUAL', name: 'Sesi 3 (Individual)', capacity: 10 },
+        { idSuffix: 's4', time: '14:30 - 15:30', type: 'GROUP', name: 'Sesi 4 (Group Class)', capacity: 20 },
+        { idSuffix: 's5', time: '16:00 - 17:00', type: 'INDIVIDUAL', name: 'Sesi 5 (Individual)', capacity: 10 }
+      ];
+
+      for (let day = 1; day <= daysInSeptember2026; day++) {
+        const dateStr = `2026-09-${day < 10 ? '0' + day : day}`;
+        const dateObj = new Date(dateStr);
+        const dayOfWeek = dateObj.getDay(); // 0: Sun, 1: Mon, 2: Tue, 3: Wed, 4: Thu, 5: Fri, 6: Sat
+
+        let isAvailableDay = false;
+
+        if (day >= 1 && day <= 7) {
+          // Minggu 1: Senin (1), Rabu (3), Sabtu (6)
+          if (dayOfWeek === 1 || dayOfWeek === 3 || dayOfWeek === 6) isAvailableDay = true;
+        } else if (day >= 8 && day <= 14) {
+          // Minggu 2: Selasa (2), Kamis (4), Minggu (0)
+          if (dayOfWeek === 2 || dayOfWeek === 4 || dayOfWeek === 0) isAvailableDay = true;
+        } else if (day >= 15 && day <= 21) {
+          // Minggu 3: Selasa (2), Jumat (5), Sabtu (6)
+          if (dayOfWeek === 2 || dayOfWeek === 5 || dayOfWeek === 6) isAvailableDay = true;
+        } else if (day >= 22) {
+          // Minggu 4: Senin (1), Kamis (4), Minggu (0)
+          if (dayOfWeek === 1 || dayOfWeek === 4 || dayOfWeek === 0) isAvailableDay = true;
+        }
+
+        if (isAvailableDay) {
+          dailySessionTemplates.forEach((template) => {
+            schedule.push({
+              id: `${dateStr}-${template.idSuffix}`,
+              date: dateStr,
+              startTime: template.time.split(' - ')[0],
+              endTime: template.time.split(' - ')[1],
+              sessionType: template.type,
+              sessionName: template.name,
+              capacity: template.capacity,
+              booked: Math.floor(Math.random() * 3), // Simulasi booked acak
+              status: 'OPEN'
+            });
+          });
+        }
+      }
+
+      return schedule;
     };
 
     // --- COMPONENT FOTO AMAN ---
@@ -106,60 +164,24 @@
       );
     };
 
-    // --- SVG ICONS INLINE ---
+    // --- SVG ICONS ---
     const IconClock = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
     const IconArrowRight = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
     const IconCheckCircle = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
     const IconChevronRight = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="9 18 15 12 9 6"/></svg>;
     const IconMenu = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>;
     const IconX = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
-    const IconMapPin = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>;
     const IconLock = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
     const IconCreditCard = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>;
     const IconAlertCircle = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
     const IconDashboard = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>;
-
-    // --- PAYMENT SERVICE ABSTRACTION ---
-    const paymentService = {
-      mode: 'MOCK',
-      createPayment: async ({ bookingId, customerName, customerEmail, customerPhone, amount, description }) => {
-        await new Promise(r => setTimeout(r, 600));
-        return {
-          success: true,
-          paymentProvider: 'MOCK',
-          paymentId: `MOCK-${bookingId}-${Date.now().toString().slice(-4)}`,
-          paymentUrl: `mock-checkout://${bookingId}`,
-          status: 'PENDING_PAYMENT',
-          paymentExpiresAt: Date.now() + HOLD_DURATION_MS
-        };
-      },
-      verifyAndConfirmBooking: async (bookingDocId, sessionId, participants) => {
-        const bookingRef = getDocRef('bookings', bookingDocId);
-        const sessionRef = getDocRef('sessions', sessionId);
-
-        await bookingRef.update({
-          paymentStatus: 'PAID',
-          bookingStatus: 'CONFIRMED',
-          paidAt: Date.now()
-        });
-
-        if (sessionRef && sessionId) {
-          const snap = await sessionRef.get();
-          if (snap.exists) {
-            const currentBooked = snap.data().booked || 0;
-            await sessionRef.update({
-              booked: currentBooked + participants
-            });
-          }
-        }
-      }
-    };
 
     // --- MAIN APP COMPONENT ---
     function App() {
       const [authUser, setAuthUser] = useState(null);
       const [adminProfile, setAdminProfile] = useState(null);
       const [currentView, setCurrentView] = useState('home');
+      const [selectedType, setSelectedType] = useState('INDIVIDUAL'); // INDIVIDUAL / GROUP
       const [activeBooking, setActiveBooking] = useState(null);
       const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -168,52 +190,41 @@
         group: { price: 150000, name: 'Group Class' },
         onsite: { price: 200000, name: 'We Come To You' }
       });
-      const [sessions, setSessions] = useState([]);
+
+      const [allSessions, setAllSessions] = useState([]);
 
       useEffect(() => {
         auth.signInAnonymously().catch(() => {});
         const unsub = auth.onAuthStateChanged((user) => {
           setAuthUser(user);
-          if (user && !user.isAnonymous) {
-            if (user.email === 'admin@ruangqu.com') {
-              setAdminProfile({ uid: user.uid, email: user.email, role: 'admin', name: 'RuangQu Admin' });
-            }
+          if (user && !user.isAnonymous && user.email === 'admin@ruangqu.com') {
+            setAdminProfile({ uid: user.uid, email: user.email, role: 'admin', name: 'RuangQu Admin' });
           }
         });
+
+        // Generate Jadwal Bulanan
+        setAllSessions(generateMonthlySchedule());
+
         return () => unsub();
       }, []);
 
-      useEffect(() => {
-        const sampleSessions = [
-          { id: 's1', date: '2026-09-12', startTime: '10:00', endTime: '11:00', capacity: 10, booked: 2, status: 'OPEN', sessionType: 'INDIVIDUAL' },
-          { id: 's2', date: '2026-09-12', startTime: '13:00', endTime: '14:00', capacity: 10, booked: 9, status: 'OPEN', sessionType: 'INDIVIDUAL' },
-          { id: 's3', date: '2026-09-13', startTime: '11:00', endTime: '12:00', capacity: 10, booked: 10, status: 'FULL', sessionType: 'INDIVIDUAL' },
-          { id: 's4', date: '2026-09-13', startTime: '15:00', endTime: '16:00', capacity: 10, booked: 0, status: 'OPEN', sessionType: 'INDIVIDUAL' },
-        ];
-        setSessions(sampleSessions);
-      }, []);
-
-      const navigate = (view, data = null) => {
+      const navigate = (view, type = 'INDIVIDUAL', data = null) => {
         if (view === 'admin' && !adminProfile) {
           setCurrentView('admin_login');
           return;
         }
+        setSelectedType(type);
         setCurrentView(view);
         if (data) setActiveBooking(data);
         window.scrollTo(0, 0);
         setIsMobileMenuOpen(false);
       };
 
-      // --- NAVBAR (Menggunakan Logo RuangQu) ---
+      // --- NAVBAR ---
       const Navbar = () => (
-        <nav className={`sticky top-0 z-50 bg-white/90 backdrop-blur-md ${theme.border} border-b px-4 md:px-8 py-3 flex justify-between items-center shadow-sm`}>
+        <nav className={`sticky top-0 z-50 bg-white ${theme.border} border-b px-4 md:px-8 py-3 flex justify-between items-center shadow-sm`}>
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('home')}>
-            <img 
-              src={APP_IMAGES.LOGO} 
-              alt="Logo RuangQu" 
-              className="h-8 md:h-10 object-contain"
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
+            <img src={APP_IMAGES.LOGO} alt="Logo RuangQu" className="h-8 md:h-10 object-contain" onError={(e) => { e.target.style.display = 'none'; }} />
             <div>
               <span className="font-semibold tracking-wider text-sm md:text-base block leading-none text-[#2D2A26]">CHOPSTICK MAKING</span>
               <span className="text-[10px] text-[#8B5A2B] tracking-widest uppercase">by RuangQu</span>
@@ -241,7 +252,7 @@
           </div>
 
           {isMobileMenuOpen && (
-            <div className={`absolute top-[58px] left-0 w-full bg-white border-b ${theme.border} flex flex-col p-5 shadow-xl md:hidden z-50`}>
+            <div className="absolute top-[58px] left-0 w-full bg-white border-b flex flex-col p-5 shadow-xl md:hidden z-50">
               <button onClick={() => navigate('home')} className="py-3 text-left border-b border-stone-200 text-sm font-medium">Experiences</button>
               <button onClick={() => navigate('lookup')} className="py-3 text-left border-b border-stone-200 text-sm font-medium">Manage Your Booking</button>
               {adminProfile ? (
@@ -258,16 +269,11 @@
         </nav>
       );
 
-      // --- FOOTER (Menggunakan Logo RuangQu) ---
+      // --- FOOTER ---
       const Footer = () => (
-        <footer className={`${theme.primary} text-white py-12 px-6 text-center mt-auto relative z-10`}>
+        <footer className={`${theme.primary} text-white py-12 px-6 text-center mt-auto`}>
           <div className="max-w-4xl mx-auto flex flex-col items-center gap-4">
-            <img 
-              src={APP_IMAGES.LOGO} 
-              alt="Logo RuangQu" 
-              className="h-10 object-contain brightness-0 invert opacity-90"
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
+            <img src={APP_IMAGES.LOGO} alt="Logo RuangQu" className="h-10 object-contain brightness-0 invert opacity-90" onError={(e) => { e.target.style.display = 'none'; }} />
             <p className="text-white/80 max-w-md text-xs md:text-sm leading-relaxed">
               A hands-on woodworking experience where you shape, smooth and personalize your own pair of wooden chopsticks.
             </p>
@@ -285,7 +291,7 @@
           
           <section className="relative pt-10 pb-16 md:py-20 px-4 md:px-8 max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-10 md:gap-12">
             <div className="flex-1 space-y-5 text-center md:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#E8E1D5]/80 backdrop-blur-sm text-[#8B5A2B] text-[11px] font-semibold tracking-widest rounded-full border border-[#D8C1B5]">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#E8E1D5] text-[#8B5A2B] text-[11px] font-semibold tracking-widest rounded-full border border-[#D8C1B5]">
                 <span>RUANGQU MAKERSPACE</span> • <span>JAKARTA</span>
               </div>
               <h1 className="text-4xl md:text-6xl font-light tracking-tight text-[#2D2A26] leading-tight">
@@ -298,14 +304,14 @@
                 <button onClick={() => document.getElementById('experiences').scrollIntoView({ behavior: 'smooth' })} className={`${theme.primary} ${theme.primaryHover} text-white px-7 py-3.5 rounded-md font-medium text-xs tracking-wider transition flex items-center justify-center gap-2 shadow-md`}>
                   BOOK YOUR EXPERIENCE <IconArrowRight size={16} />
                 </button>
-                <button onClick={() => document.getElementById('how-it-works').scrollIntoView({ behavior: 'smooth' })} className="bg-white/80 border border-[#2D2A26] text-[#2D2A26] hover:bg-stone-100 px-6 py-3.5 rounded-md font-medium text-xs tracking-wider transition">
+                <button onClick={() => document.getElementById('how-it-works').scrollIntoView({ behavior: 'smooth' })} className="bg-white border border-[#2D2A26] text-[#2D2A26] hover:bg-stone-100 px-6 py-3.5 rounded-md font-medium text-xs tracking-wider transition">
                   HOW IT WORKS
                 </button>
               </div>
             </div>
             <div className="flex-1 w-full relative max-w-lg md:max-w-none">
               <PlaceholderImage label="HERO_IMAGE" className="w-full aspect-[4/3] rounded-lg shadow-xl" />
-              <div className="absolute -bottom-4 -left-4 md:-bottom-6 md:-left-6 bg-white/95 backdrop-blur-sm p-3.5 md:p-4 rounded-lg shadow-lg flex items-center gap-3 border border-[#E8E1D5]">
+              <div className="absolute -bottom-4 -left-4 md:-bottom-6 md:-left-6 bg-white p-3.5 md:p-4 rounded-lg shadow-lg flex items-center gap-3 border border-[#E8E1D5]">
                 <div className="bg-[#E8E1D5] text-[#8B5A2B] p-2 rounded-full"><IconClock size={18}/></div>
                 <div>
                   <p className="text-[10px] text-stone-500 uppercase tracking-wider">Duration</p>
@@ -315,7 +321,7 @@
             </div>
           </section>
 
-          <section id="experiences" className="py-16 md:py-20 px-4 bg-white/80 backdrop-blur-sm border-y border-[#E8E1D5]">
+          <section id="experiences" className="py-16 md:py-20 px-4 bg-white border-y border-[#E8E1D5]">
             <div className="max-w-6xl mx-auto">
               <div className="text-center mb-12">
                 <h2 className="text-2xl md:text-3xl font-medium tracking-tight mb-2">Choose Your Experience</h2>
@@ -324,7 +330,7 @@
 
               <div className="grid md:grid-cols-3 gap-6 md:gap-8">
                 {/* Individual */}
-                <div className="bg-[#F9F7F2]/90 rounded-xl overflow-hidden border border-[#E8E1D5] flex flex-col hover:shadow-md transition">
+                <div className="bg-[#F9F7F2] rounded-xl overflow-hidden border border-[#E8E1D5] flex flex-col hover:shadow-md transition">
                   <PlaceholderImage label="INDIVIDUAL_CLASS_IMAGE" className="h-48 w-full" />
                   <div className="p-6 flex flex-col flex-grow">
                     <div className="flex justify-between items-start mb-2">
@@ -338,14 +344,14 @@
                       <p className="font-semibold text-lg">{formatCurrency(products.individual?.price)} <span className="text-xs font-normal text-[#5C5A56]">/ person</span></p>
                       <p className="text-[11px] text-[#5C5A56] mt-0.5">1–10 spots per session • 45–60 mins</p>
                     </div>
-                    <button onClick={() => navigate('individual')} className={`w-full ${theme.primary} ${theme.primaryHover} text-white py-3 rounded-md font-medium text-xs tracking-wider transition`}>
+                    <button onClick={() => navigate('booking', 'INDIVIDUAL')} className={`w-full ${theme.primary} ${theme.primaryHover} text-white py-3 rounded-md font-medium text-xs tracking-wider transition`}>
                       BOOK INDIVIDUAL
                     </button>
                   </div>
                 </div>
 
                 {/* Group */}
-                <div className="bg-[#F9F7F2]/90 rounded-xl overflow-hidden border border-[#E8E1D5] flex flex-col hover:shadow-md transition">
+                <div className="bg-[#F9F7F2] rounded-xl overflow-hidden border border-[#E8E1D5] flex flex-col hover:shadow-md transition">
                   <PlaceholderImage label="GROUP_CLASS_IMAGE" className="h-48 w-full" />
                   <div className="p-6 flex flex-col flex-grow">
                     <h3 className="text-lg font-medium mb-2">Group Class</h3>
@@ -356,14 +362,14 @@
                       <p className="font-semibold text-lg">{formatCurrency(products.group?.price)} <span className="text-xs font-normal text-[#5C5A56]">/ person</span></p>
                       <p className="text-[11px] text-[#5C5A56] mt-0.5">Min. 10 pax, max 20 pax</p>
                     </div>
-                    <button onClick={() => navigate('individual')} className={`w-full bg-[#2D2A26] hover:bg-stone-900 text-white py-3 rounded-md font-medium text-xs tracking-wider transition`}>
+                    <button onClick={() => navigate('booking', 'GROUP')} className={`w-full bg-[#2D2A26] hover:bg-stone-900 text-white py-3 rounded-md font-medium text-xs tracking-wider transition`}>
                       BOOK PRIVATE GROUP
                     </button>
                   </div>
                 </div>
 
                 {/* On-Site */}
-                <div className="bg-[#F9F7F2]/90 rounded-xl overflow-hidden border border-[#E8E1D5] flex flex-col hover:shadow-md transition">
+                <div className="bg-[#F9F7F2] rounded-xl overflow-hidden border border-[#E8E1D5] flex flex-col hover:shadow-md transition">
                   <PlaceholderImage label="ON_SITE_IMAGE" className="h-48 w-full" />
                   <div className="p-6 flex flex-col flex-grow">
                     <h3 className="text-lg font-medium mb-2">We Come To You</h3>
@@ -374,7 +380,7 @@
                       <p className="font-semibold text-lg">{formatCurrency(products.onsite?.price)} <span className="text-xs font-normal text-[#5C5A56]">/ person</span></p>
                       <p className="text-[11px] text-[#5C5A56] mt-0.5">Min. 10 pax + Custom transport fee</p>
                     </div>
-                    <button onClick={() => navigate('individual')} className={`w-full bg-white border border-[#2D2A26] text-[#2D2A26] hover:bg-stone-50 py-3 rounded-md font-medium text-xs tracking-wider transition`}>
+                    <button onClick={() => navigate('onsite')} className={`w-full bg-white border border-[#2D2A26] text-[#2D2A26] hover:bg-stone-50 py-3 rounded-md font-medium text-xs tracking-wider transition`}>
                       REQUEST ON-SITE EVENT
                     </button>
                   </div>
@@ -396,7 +402,7 @@
                   { label: 'PROCESS_IMAGE_03', num: '03', title: 'Smooth & Sand', desc: 'Progressively sand to an ultra-smooth finish.' },
                   { label: 'FINISHED_CHOPSTICKS_IMAGE', num: '04', title: 'Oil & Take Home', desc: 'Apply natural food-safe beeswax oil & use!' }
                 ].map((st, i) => (
-                  <div key={i} className="bg-white/90 backdrop-blur-sm p-4 rounded-xl border border-[#E8E1D5] text-center flex flex-col items-center">
+                  <div key={i} className="bg-white p-4 rounded-xl border border-[#E8E1D5] text-center flex flex-col items-center">
                     <PlaceholderImage label={st.label} className="w-full aspect-square rounded-lg mb-3" />
                     <span className="text-lg font-serif text-[#8B5A2B] font-bold block mb-1">{st.num}</span>
                     <h4 className="font-medium text-xs md:text-sm mb-1">{st.title}</h4>
@@ -411,26 +417,38 @@
         </div>
       );
 
-      // --- INDIVIDUAL BOOKING ---
-      const IndividualBookingFlow = () => {
+      // --- BOOKING FLOW (INDIVIDUAL & GROUP CLASS) ---
+      const BookingFlow = () => {
         const [step, setStep] = useState(1);
         const [selectedDate, setSelectedDate] = useState('');
         const [selectedSession, setSelectedSession] = useState(null);
-        const [participants, setParticipants] = useState(1);
-        const [maxAvailable, setMaxAvailable] = useState(10);
+        const [participants, setParticipants] = useState(selectedType === 'GROUP' ? 10 : 1);
+        const [maxAvailable, setMaxAvailable] = useState(selectedType === 'GROUP' ? 20 : 10);
         const [formData, setFormData] = useState({ name: '', whatsapp: '', email: '' });
         const [errorMsg, setErrorMsg] = useState('');
 
-        const product = products.individual;
-        const uniqueDates = [...new Set(sessions.map(s => s.date))].sort();
-        const availableSessions = sessions.filter(s => s.date === selectedDate);
+        const isGroup = selectedType === 'GROUP';
+        const product = isGroup ? products.group : products.individual;
+
+        // Filter sesi berdasarkan tipe (INDIVIDUAL / GROUP)
+        const filteredSessions = useMemo(() => {
+          return allSessions.filter(s => s.sessionType === selectedType);
+        }, [selectedType]);
+
+        const uniqueDates = useMemo(() => {
+          return [...new Set(filteredSessions.map(s => s.date))].sort();
+        }, [filteredSessions]);
+
+        const availableSessionsForDate = useMemo(() => {
+          return filteredSessions.filter(s => s.date === selectedDate);
+        }, [filteredSessions, selectedDate]);
 
         const handleSelectSession = (session) => {
           setSelectedSession(session);
           const avail = Math.max(0, session.capacity - (session.booked || 0));
           setMaxAvailable(avail);
           if (participants > avail) {
-            setParticipants(avail > 0 ? avail : 1);
+            setParticipants(avail > 0 ? avail : (isGroup ? 10 : 1));
           }
         };
 
@@ -438,6 +456,10 @@
           if (!selectedSession) return;
           if (participants > maxAvailable) {
             setErrorMsg(`Hanya tersisa ${maxAvailable} tempat untuk sesi ini.`);
+            return;
+          }
+          if (isGroup && participants < 10) {
+            setErrorMsg('Minimal peserta untuk Group Class adalah 10 orang.');
             return;
           }
           setErrorMsg('');
@@ -453,15 +475,6 @@
           const bookingId = generateBookingId();
           const total = participants * product.price;
 
-          const paymentResp = await paymentService.createPayment({
-            bookingId,
-            customerName: formData.name,
-            customerEmail: formData.email,
-            customerPhone: formData.whatsapp,
-            amount: total,
-            description: `Individual Chopstick Class (${participants} pax)`
-          });
-
           const bookingRecord = {
             id: 'b_' + Date.now(),
             bookingId,
@@ -469,8 +482,9 @@
             customerName: formData.name,
             whatsapp: formData.whatsapp,
             email: formData.email,
-            bookingType: 'INDIVIDUAL',
+            bookingType: selectedType,
             sessionId: selectedSession.id,
+            sessionName: selectedSession.sessionName,
             date: selectedSession.date,
             time: selectedSession.startTime,
             participants,
@@ -478,23 +492,28 @@
             total,
             bookingStatus: 'PENDING_PAYMENT',
             paymentStatus: 'PENDING',
-            paymentExpiresAt: paymentResp.paymentExpiresAt
+            paymentExpiresAt: Date.now() + HOLD_DURATION_MS
           };
 
-          navigate('mock_payment', bookingRecord);
+          navigate('mock_payment', selectedType, bookingRecord);
         };
 
         return (
-          <div className={`min-h-screen flex flex-col`}>
+          <div className="min-h-screen flex flex-col bg-[#F9F7F2]">
             <Navbar />
-            <div className="max-w-3xl mx-auto w-full px-4 py-8 flex-grow relative z-10">
+            <div className="max-w-3xl mx-auto w-full px-4 py-8 flex-grow">
               <button onClick={() => step > 1 ? setStep(step-1) : navigate('home')} className="flex items-center gap-1.5 text-xs font-medium mb-6 hover:opacity-75 transition">
                 <IconChevronRight className="rotate-180" size={14}/> Back
               </button>
               
-              <div className="bg-white/95 backdrop-blur-md p-6 md:p-10 rounded-xl shadow-sm border border-[#E8E1D5]">
-                <h2 className="text-2xl font-medium mb-1">Book Individual Class</h2>
-                <p className="text-xs text-[#5C5A56] mb-6">{formatCurrency(product.price)} / person • Max 10 spots per session</p>
+              <div className="bg-white p-6 md:p-10 rounded-xl shadow-sm border border-[#E8E1D5]">
+                <div className="flex justify-between items-center mb-1">
+                  <h2 className="text-2xl font-medium">{isGroup ? 'Book Private Group Class' : 'Book Individual Class'}</h2>
+                  <span className="text-xs bg-[#E8E1D5] text-[#8B5A2B] px-2.5 py-1 rounded font-medium">{selectedType}</span>
+                </div>
+                <p className="text-xs text-[#5C5A56] mb-6">
+                  {formatCurrency(product.price)} / person • {isGroup ? 'Min 10 - Maks 20 orang per sesi' : 'Maks 10 orang per sesi'}
+                </p>
 
                 {errorMsg && (
                   <div className="bg-red-50 text-red-700 p-3 rounded-md text-xs mb-6 border border-red-200 flex items-center gap-2">
@@ -505,7 +524,7 @@
                 {step === 1 && (
                   <div className="space-y-6">
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-2">1. Choose Date</label>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-2">1. Pilih Tanggal (September 2026)</label>
                       <div className="flex flex-wrap gap-2.5">
                         {uniqueDates.map(date => (
                           <button 
@@ -513,7 +532,7 @@
                             onClick={() => { setSelectedDate(date); setSelectedSession(null); }}
                             className={`px-3.5 py-2 border rounded-md text-xs font-medium transition ${selectedDate === date ? 'border-[#8B5A2B] bg-[#F9F7F2] text-[#8B5A2B]' : 'border-stone-200 bg-white'}`}
                           >
-                            {formatDate(date).split(',')[0]}, {formatDate(date).split(' ')[1]} {formatDate(date).split(' ')[2]?.replace(',','')}
+                            {formatDate(date)}
                           </button>
                         ))}
                       </div>
@@ -521,11 +540,11 @@
 
                     {selectedDate && (
                       <div>
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-2">2. Choose Time Slot</label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                          {availableSessions.map(session => {
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-2">2. Pilih Sesi Jam</label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                          {availableSessionsForDate.map(session => {
                             const remaining = Math.max(0, session.capacity - (session.booked || 0));
-                            const isFull = remaining <= 0;
+                            const isFull = remaining <= 0 || (isGroup && remaining < 10);
                             const isSelected = selectedSession?.id === session.id;
 
                             return (
@@ -533,14 +552,17 @@
                                 key={session.id}
                                 disabled={isFull}
                                 onClick={() => handleSelectSession(session)}
-                                className={`p-3 border rounded-lg flex flex-col items-center justify-center transition
+                                className={`p-3.5 border rounded-lg flex justify-between items-center transition
                                   ${isFull ? 'bg-stone-50 border-stone-200 opacity-40 cursor-not-allowed' : 
                                     isSelected ? 'border-[#8B5A2B] bg-[#F9F7F2] text-[#8B5A2B]' : 'border-stone-200 bg-white hover:border-stone-300'}
                                 `}
                               >
-                                <span className="font-semibold text-sm">{session.startTime}</span>
-                                <span className={`text-[10px] mt-1 font-medium ${isFull ? 'text-red-500' : remaining <= 2 ? 'text-amber-600' : 'text-green-600'}`}>
-                                  {isFull ? 'FULL' : `${remaining} spot left`}
+                                <div className="text-left">
+                                  <span className="font-semibold text-xs block">{session.sessionName}</span>
+                                  <span className="text-[11px] text-stone-500">{session.startTime} - {session.endTime} WIB</span>
+                                </div>
+                                <span className={`text-[10px] font-semibold px-2 py-1 rounded ${isFull ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                                  {isFull ? 'PENUH' : `${remaining} Sisa Slot`}
                                 </span>
                               </button>
                             );
@@ -551,18 +573,26 @@
 
                     {selectedSession && (
                       <div>
-                        <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-2">3. Number of Participants</label>
-                        <select 
-                          value={participants} 
-                          onChange={(e) => setParticipants(parseInt(e.target.value))}
-                          className="w-full md:w-1/2 p-2.5 border border-stone-300 rounded-md text-sm bg-white"
-                        >
-                          {[...Array(Math.min(10, maxAvailable)).keys()].map(n => (
-                            <option key={n+1} value={n+1}>{n+1} {n+1 === 1 ? 'Participant' : 'Participants'} ({formatCurrency((n+1) * product.price)})</option>
-                          ))}
-                        </select>
-                        {maxAvailable <= 3 && (
-                          <p className="text-[11px] text-amber-700 mt-1 font-medium">Sesi ini hanya menyisakan {maxAvailable} tempat.</p>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-2">3. Jumlah Peserta</label>
+                        {isGroup ? (
+                          <input 
+                            type="number" 
+                            min="10" 
+                            max={Math.min(20, maxAvailable)} 
+                            value={participants} 
+                            onChange={(e) => setParticipants(parseInt(e.target.value) || 10)} 
+                            className="w-full md:w-1/2 p-2.5 border border-stone-300 rounded-md text-sm bg-white"
+                          />
+                        ) : (
+                          <select 
+                            value={participants} 
+                            onChange={(e) => setParticipants(parseInt(e.target.value))}
+                            className="w-full md:w-1/2 p-2.5 border border-stone-300 rounded-md text-sm bg-white"
+                          >
+                            {[...Array(Math.min(10, maxAvailable)).keys()].map(n => (
+                              <option key={n+1} value={n+1}>{n+1} Peserta ({formatCurrency((n+1) * product.price)})</option>
+                            ))}
+                          </select>
                         )}
                       </div>
                     )}
@@ -572,7 +602,7 @@
                       onClick={handleContinueToDetails}
                       className={`w-full py-3.5 rounded-md font-medium text-xs tracking-wider transition mt-4 ${selectedSession ? `${theme.primary} text-white shadow-md` : 'bg-stone-200 text-stone-400 cursor-not-allowed'}`}
                     >
-                      CONTINUE TO DETAILS
+                      LANJUTKAN KE DETAIL
                     </button>
                   </div>
                 )}
@@ -582,32 +612,130 @@
                     <div className="bg-[#F9F7F2] p-4 rounded-lg border border-[#E8E1D5] flex justify-between items-center text-xs">
                       <div>
                         <p className="font-semibold text-stone-800">{formatDate(selectedSession.date)}</p>
-                        <p className="text-stone-500">{selectedSession.startTime} WIB • {participants} Participants</p>
+                        <p className="text-stone-500">{selectedSession.sessionName} ({selectedSession.startTime} WIB) • {participants} Peserta</p>
                       </div>
-                      <button onClick={() => setStep(1)} className="text-[#8B5A2B] underline">Change</button>
+                      <button onClick={() => setStep(1)} className="text-[#8B5A2B] underline">Ubah</button>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium mb-1">Full Name *</label>
-                      <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border rounded-md text-sm" placeholder="e.g. Budi Santoso" />
+                      <label className="block text-xs font-medium mb-1">Nama Pemesan / Group *</label>
+                      <input type="text" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2.5 border rounded-md text-sm" placeholder="e.g. Budi Santoso / Komunitas Kayu" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium mb-1">WhatsApp Number *</label>
+                      <label className="block text-xs font-medium mb-1">Nomor WhatsApp *</label>
                       <input type="tel" required value={formData.whatsapp} onChange={e => setFormData({...formData, whatsapp: e.target.value})} className="w-full p-2.5 border rounded-md text-sm" placeholder="e.g. 08123456789" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1">Email</label>
+                      <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full p-2.5 border rounded-md text-sm" placeholder="nama@email.com" />
                     </div>
 
                     <div className="border-t border-stone-200 pt-4 mt-4">
                       <div className="flex justify-between font-semibold text-base text-stone-900">
-                        <span>Total Payment</span>
+                        <span>Total Pembayaran</span>
                         <span className="text-[#8B5A2B]">{formatCurrency(participants * product.price)}</span>
                       </div>
                     </div>
 
                     <button onClick={handleCreateHoldAndPay} className={`w-full py-3.5 rounded-md font-medium text-xs text-white ${theme.primary} shadow-md`}>
-                      PROCEED TO PAYMENT ({formatCurrency(participants * product.price)})
+                      LANJUT KE PEMBAYARAN ({formatCurrency(participants * product.price)})
                     </button>
                   </div>
                 )}
+              </div>
+            </div>
+            <Footer />
+          </div>
+        );
+      };
+
+      // --- FORM WE COME TO YOU (ON-SITE) ---
+      const OnSiteFlow = () => {
+        const [formData, setFormData] = useState({
+          groupName: '',
+          participants: 10,
+          location: '',
+          eventDate: '',
+          eventTime: '10:00',
+          whatsapp: ''
+        });
+        const [isSubmitted, setIsSubmitted] = useState(false);
+
+        const handleSubmit = (e) => {
+          e.preventDefault();
+          setIsSubmitted(true);
+        };
+
+        if (isSubmitted) {
+          return (
+            <div className="min-h-screen flex flex-col bg-[#F9F7F2]">
+              <Navbar />
+              <div className="flex-grow flex items-center justify-center p-4">
+                <div className="bg-white p-8 md:p-10 rounded-xl text-center max-w-md w-full shadow-lg border border-[#E8E1D5]">
+                  <div className="w-14 h-14 bg-green-100 text-green-700 rounded-full flex items-center justify-center mx-auto mb-4"><IconCheckCircle size={30}/></div>
+                  <h2 className="text-xl font-medium mb-2">Permintaan Diterima!</h2>
+                  <p className="text-xs text-[#5C5A56] leading-relaxed mb-6">
+                    Terima kasih <strong>{formData.groupName}</strong>! Detail kegiatan on-site Anda pada tanggal <strong>{formatDate(formData.eventDate)}</strong> telah kami terima. Tim RuangQu akan segera menghubungi WhatsApp Anda di <strong>{formData.whatsapp}</strong> untuk mengonfirmasi detail & rincian biaya.
+                  </p>
+                  <button onClick={() => navigate('home')} className={`${theme.primary} text-white py-2.5 px-6 rounded-md text-xs shadow-md`}>
+                    Kembali ke Beranda
+                  </button>
+                </div>
+              </div>
+              <Footer />
+            </div>
+          );
+        }
+
+        return (
+          <div className="min-h-screen flex flex-col bg-[#F9F7F2]">
+            <Navbar />
+            <div className="max-w-2xl mx-auto w-full px-4 py-8 flex-grow">
+              <button onClick={() => navigate('home')} className="flex items-center gap-1.5 text-xs font-medium mb-6 hover:opacity-75 transition">
+                <IconChevronRight className="rotate-180" size={14}/> Back
+              </button>
+
+              <div className="bg-white p-6 md:p-10 rounded-xl shadow-sm border border-[#E8E1D5]">
+                <h2 className="text-2xl font-medium mb-1">We Come To You (On-Site Workshop)</h2>
+                <p className="text-xs text-[#5C5A56] mb-6">Isi formulir di bawah ini. Tim kami akan menghubungi Anda untuk konfirmasi jadwal dan estimasi biaya.</p>
+
+                <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+                  <div>
+                    <label className="block font-medium mb-1">1. Nama Group / Perusahaan / Komunitas *</label>
+                    <input type="text" required value={formData.groupName} onChange={e => setFormData({...formData, groupName: e.target.value})} placeholder="e.g. PT Ruang Kreatif / Keluarga Budi" className="w-full p-2.5 border rounded-md text-sm" />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-medium mb-1">2. Jumlah Peserta (Min 10) *</label>
+                      <input type="number" min="10" required value={formData.participants} onChange={e => setFormData({...formData, participants: parseInt(e.target.value) || 10})} className="w-full p-2.5 border rounded-md text-sm" />
+                    </div>
+                    <div>
+                      <label className="block font-medium mb-1">3. Nomor WhatsApp *</label>
+                      <input type="tel" required value={formData.whatsapp} onChange={e => setFormData({...formData, whatsapp: e.target.value})} placeholder="e.g. 08123456789" className="w-full p-2.5 border rounded-md text-sm" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block font-medium mb-1">4. Tanggal Kegiatan *</label>
+                      <input type="date" required value={formData.eventDate} onChange={e => setFormData({...formData, eventDate: e.target.value})} className="w-full p-2.5 border rounded-md text-sm" />
+                    </div>
+                    <div>
+                      <label className="block font-medium mb-1">5. Jam Kegiatan *</label>
+                      <input type="time" required value={formData.eventTime} onChange={e => setFormData({...formData, eventTime: e.target.value})} className="w-full p-2.5 border rounded-md text-sm" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-medium mb-1">6. Lokasi Kegiatan (Jabodetabek) *</label>
+                    <textarea required rows="3" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} placeholder="Alamat lengkap lokasi/gedung kegiatan" className="w-full p-2.5 border rounded-md text-sm"></textarea>
+                  </div>
+
+                  <button type="submit" className={`w-full py-3.5 text-white rounded-md font-medium text-xs ${theme.primary} shadow-md transition mt-2`}>
+                    KIRIM PERMINTAAN ON-SITE
+                  </button>
+                </form>
               </div>
             </div>
             <Footer />
@@ -620,14 +748,14 @@
         if (!activeBooking) return navigate('home');
 
         const handleConfirmPayment = () => {
-          navigate('confirmation', { ...activeBooking, bookingStatus: 'CONFIRMED', paymentStatus: 'PAID' });
+          navigate('confirmation', selectedType, { ...activeBooking, bookingStatus: 'CONFIRMED', paymentStatus: 'PAID' });
         };
 
         return (
-          <div className={`min-h-screen flex flex-col`}>
+          <div className="min-h-screen flex flex-col bg-[#F9F7F2]">
             <Navbar />
-            <div className="flex-grow flex items-center justify-center p-4 py-8 relative z-10">
-              <div className="bg-white/95 backdrop-blur-md p-6 rounded-xl max-w-md w-full border border-stone-200 shadow-lg space-y-4">
+            <div className="flex-grow flex items-center justify-center p-4 py-8">
+              <div className="bg-white p-6 rounded-xl max-w-md w-full border border-stone-200 shadow-lg space-y-4">
                 <div className="border-b pb-3">
                   <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded">MOCK PAYMENT GATEWAY</span>
                   <h3 className="font-semibold text-stone-800 text-base mt-1">Mayar Checkout Preview</h3>
@@ -651,15 +779,15 @@
 
       // --- CONFIRMATION ---
       const ConfirmationView = () => (
-        <div className={`min-h-screen flex flex-col`}>
+        <div className="min-h-screen flex flex-col bg-[#F9F7F2]">
           <Navbar />
-          <div className="flex-grow flex items-center justify-center p-4 py-12 relative z-10">
-            <div className="bg-white/95 backdrop-blur-md p-8 rounded-xl text-center max-w-md w-full shadow-lg border relative">
+          <div className="flex-grow flex items-center justify-center p-4 py-12">
+            <div className="bg-white p-8 rounded-xl text-center max-w-md w-full shadow-lg border relative">
               <div className="w-14 h-14 bg-green-100 text-green-700 rounded-full flex items-center justify-center mx-auto mb-4"><IconCheckCircle size={30}/></div>
               <h2 className="text-xl font-medium mb-1">Booking Confirmed!</h2>
               <p className="text-xs text-stone-500 mb-6">Kami menunggu kedatangan Anda di RuangQu Makerspace.</p>
               <button onClick={() => navigate('home')} className={`${theme.primary} text-white py-2.5 px-6 rounded-md text-xs shadow-md`}>
-                Back to Homepage
+                Kembali ke Beranda
               </button>
             </div>
           </div>
@@ -683,10 +811,10 @@
         };
 
         return (
-          <div className={`min-h-screen flex flex-col`}>
+          <div className="min-h-screen flex flex-col bg-[#F9F7F2]">
             <Navbar />
-            <div className="flex-grow flex items-center justify-center p-4 relative z-10">
-              <div className="bg-white/95 backdrop-blur-md p-8 rounded-xl max-w-sm w-full border shadow-md space-y-4">
+            <div className="flex-grow flex items-center justify-center p-4">
+              <div className="bg-white p-8 rounded-xl max-w-sm w-full border shadow-md space-y-4">
                 <h2 className="text-lg font-medium text-center">Admin Login</h2>
                 <form onSubmit={handleLogin} className="space-y-3 text-xs">
                   <div>
@@ -706,12 +834,11 @@
         );
       };
 
-      // --- ROUTER & OVERLAY CONTAINER ---
+      // --- ROUTER ---
       const views = {
         home: <HomeView />,
-        individual: <IndividualBookingFlow />,
-        group: <HomeView />,
-        onsite: <HomeView />,
+        booking: <BookingFlow />,
+        onsite: <OnSiteFlow />,
         mock_payment: <MockPaymentCheckout />,
         confirmation: <ConfirmationView />,
         lookup: <HomeView />,
@@ -720,17 +847,8 @@
       };
 
       return (
-        <div className="min-h-screen relative">
-          {/* LAPISAN BACKGROUND TRANSPARAN */}
-          <div 
-            className="fixed inset-0 pointer-events-none z-0 opacity-12 bg-cover bg-center bg-no-repeat bg-fixed"
-            style={{ backgroundImage: `url('${APP_IMAGES.BACKGROUND}')` }}
-          ></div>
-
-          {/* KONTEN UTAMA */}
-          <div className="relative z-10">
-            {views[currentView] || <HomeView />}
-          </div>
+        <div className="min-h-screen">
+          {views[currentView] || <HomeView />}
         </div>
       );
     }
