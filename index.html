@@ -86,7 +86,7 @@ const paymentService = {
   createPayment: async ({ bookingId, customerName, customerEmail, customerPhone, amount, description }) => {
     try {
       // GANTI URL DI BAWAL INI DENGAN URL VERCEL KAMU
-      const response = await fetch('https://NAMA-PROJECT-KAMU.vercel.app/api/payment', {
+      const response = await fetch('https://chopstick-making-by-ruang-qu.vercel.app/api/payment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
