@@ -3,21 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chopstick Making by RuangQu Makerspace</title>
+  <title>Chopstick Making by RuangQu Makerspace - Admin Portal</title>
   
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- React & ReactDOM UMD -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-  <!-- Firebase JS SDK Compat -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-  <!-- Babel Standalone -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="bg-[#F9F7F2] text-[#2D2A26] font-sans antialiased selection:bg-[#8B5A2B] selection:text-white">
@@ -55,10 +51,6 @@
     }
     const auth = firebase.auth();
     const db = firebase.firestore();
-    const appId = 'chopstick-making-app';
-
-    const getCol = (colName) => db.collection('artifacts').doc(appId).collection('publicData').doc('data').collection(colName);
-    const getDocRef = (colName, docId) => getCol(colName).doc(docId);
 
     // --- UTILS ---
     const formatCurrency = (amount) => {
@@ -88,9 +80,8 @@
     // --- GENERATOR JADWAL BULANAN DENGAN POLA MINGGUAN ---
     const generateMonthlySchedule = () => {
       const schedule = [];
-      const daysInSeptember2026 = 30; // September 2026
+      const daysInSeptember2026 = 30;
 
-      // Sesi standar per hari
       const dailySessionTemplates = [
         { idSuffix: 's1', time: '10:00 - 11:00', type: 'INDIVIDUAL', name: 'Sesi 1 (Individual)', capacity: 10 },
         { idSuffix: 's2', time: '11:30 - 12:30', type: 'GROUP', name: 'Sesi 2 (Group Class)', capacity: 20 },
@@ -102,21 +93,17 @@
       for (let day = 1; day <= daysInSeptember2026; day++) {
         const dateStr = `2026-09-${day < 10 ? '0' + day : day}`;
         const dateObj = new Date(dateStr);
-        const dayOfWeek = dateObj.getDay(); // 0: Sun, 1: Mon, 2: Tue, 3: Wed, 4: Thu, 5: Fri, 6: Sat
+        const dayOfWeek = dateObj.getDay();
 
         let isAvailableDay = false;
 
         if (day >= 1 && day <= 7) {
-          // Minggu 1: Senin (1), Rabu (3), Sabtu (6)
           if (dayOfWeek === 1 || dayOfWeek === 3 || dayOfWeek === 6) isAvailableDay = true;
         } else if (day >= 8 && day <= 14) {
-          // Minggu 2: Selasa (2), Kamis (4), Minggu (0)
           if (dayOfWeek === 2 || dayOfWeek === 4 || dayOfWeek === 0) isAvailableDay = true;
         } else if (day >= 15 && day <= 21) {
-          // Minggu 3: Selasa (2), Jumat (5), Sabtu (6)
           if (dayOfWeek === 2 || dayOfWeek === 5 || dayOfWeek === 6) isAvailableDay = true;
         } else if (day >= 22) {
-          // Minggu 4: Senin (1), Kamis (4), Minggu (0)
           if (dayOfWeek === 1 || dayOfWeek === 4 || dayOfWeek === 0) isAvailableDay = true;
         }
 
@@ -130,7 +117,7 @@
               sessionType: template.type,
               sessionName: template.name,
               capacity: template.capacity,
-              booked: Math.floor(Math.random() * 3), // Simulasi booked acak
+              booked: Math.floor(Math.random() * 2),
               status: 'OPEN'
             });
           });
@@ -140,7 +127,7 @@
       return schedule;
     };
 
-    // --- COMPONENT FOTO AMAN ---
+    // --- COMPONENT FOTO ---
     const PlaceholderImage = ({ label, className = "", style = {} }) => {
       const [imgError, setImgError] = useState(false);
       const imgSrc = APP_IMAGES[label];
@@ -175,36 +162,90 @@
     const IconCreditCard = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>;
     const IconAlertCircle = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
     const IconDashboard = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>;
+    const IconLogOut = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
+    const IconCalendar = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>;
+    const IconUsers = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+    const IconSliders = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>;
+    const IconPlus = ({ size = 16, className = "" }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
 
     // --- MAIN APP COMPONENT ---
     function App() {
       const [authUser, setAuthUser] = useState(null);
       const [adminProfile, setAdminProfile] = useState(null);
       const [currentView, setCurrentView] = useState('home');
-      const [selectedType, setSelectedType] = useState('INDIVIDUAL'); // INDIVIDUAL / GROUP
+      const [selectedType, setSelectedType] = useState('INDIVIDUAL');
       const [activeBooking, setActiveBooking] = useState(null);
       const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-      const [products] = useState({
-        individual: { price: 175000, name: 'Individual Class' },
-        group: { price: 150000, name: 'Group Class' },
-        onsite: { price: 200000, name: 'We Come To You' }
+      const [products, setProducts] = useState({
+        individual: { id: 'individual', price: 175000, name: 'Individual Class' },
+        group: { id: 'group', price: 150000, name: 'Group Class' },
+        onsite: { id: 'onsite', price: 200000, name: 'We Come To You' }
       });
 
       const [allSessions, setAllSessions] = useState([]);
+      
+      const [bookings, setBookings] = useState([
+        {
+          id: 'b_101',
+          bookingId: 'CHP-12840',
+          displayId: 'CHP-12840',
+          customerName: 'Budi Santoso',
+          whatsapp: '081234567890',
+          email: 'budi@gmail.com',
+          bookingType: 'INDIVIDUAL',
+          date: '2026-09-12',
+          time: '10:00',
+          participants: 2,
+          pricePerPerson: 175000,
+          total: 350000,
+          bookingStatus: 'CONFIRMED',
+          paymentStatus: 'PAID',
+          createdAt: Date.now() - 3600000
+        },
+        {
+          id: 'b_102',
+          bookingId: 'CHP-49210',
+          displayId: 'CHP-49210',
+          customerName: 'Siti Rahma',
+          whatsapp: '085712345678',
+          email: 'siti@gmail.com',
+          bookingType: 'GROUP',
+          date: '2026-09-12',
+          time: '11:30',
+          participants: 12,
+          pricePerPerson: 150000,
+          total: 1800000,
+          bookingStatus: 'PENDING_PAYMENT',
+          paymentStatus: 'PENDING',
+          createdAt: Date.now() - 1800000
+        }
+      ]);
+
+      const [requests, setRequests] = useState([
+        {
+          id: 'req_201',
+          groupName: 'PT Ruang Kreatif',
+          customerName: 'Maya Indah',
+          whatsapp: '08119876543',
+          participants: 15,
+          eventDate: '2026-09-20',
+          eventTime: '14:00',
+          location: 'Gedung Wisma 46, Jakarta Pusat',
+          subtotal: 3000000,
+          transportFee: 250000,
+          total: 3250000,
+          bookingStatus: 'REQUESTED'
+        }
+      ]);
 
       useEffect(() => {
         auth.signInAnonymously().catch(() => {});
         const unsub = auth.onAuthStateChanged((user) => {
           setAuthUser(user);
-          if (user && !user.isAnonymous && user.email === 'admin@ruangqu.com') {
-            setAdminProfile({ uid: user.uid, email: user.email, role: 'admin', name: 'RuangQu Admin' });
-          }
         });
 
-        // Generate Jadwal Bulanan
         setAllSessions(generateMonthlySchedule());
-
         return () => unsub();
       }, []);
 
@@ -236,11 +277,11 @@
             <button onClick={() => navigate('lookup')} className={`${theme.textMuted} hover:${theme.text} transition`}>MANAGE BOOKING</button>
             {adminProfile ? (
               <button onClick={() => navigate('admin')} className="text-[#8B5A2B] font-semibold flex items-center gap-1.5 bg-[#E8E1D5] px-3 py-1.5 rounded-full">
-                <IconDashboard size={13}/> DASHBOARD
+                <IconDashboard size={13}/> ADMIN DASHBOARD
               </button>
             ) : (
               <button onClick={() => navigate('admin_login')} className={`${theme.textMuted} hover:${theme.text} transition flex items-center gap-1`}>
-                <IconLock size={12}/> ADMIN
+                <IconLock size={12}/> ADMIN LOGIN
               </button>
             )}
           </div>
@@ -417,7 +458,7 @@
         </div>
       );
 
-      // --- BOOKING FLOW (INDIVIDUAL & GROUP CLASS) ---
+      // --- BOOKING FLOW ---
       const BookingFlow = () => {
         const [step, setStep] = useState(1);
         const [selectedDate, setSelectedDate] = useState('');
@@ -430,7 +471,6 @@
         const isGroup = selectedType === 'GROUP';
         const product = isGroup ? products.group : products.individual;
 
-        // Filter sesi berdasarkan tipe (INDIVIDUAL / GROUP)
         const filteredSessions = useMemo(() => {
           return allSessions.filter(s => s.sessionType === selectedType);
         }, [selectedType]);
@@ -495,6 +535,7 @@
             paymentExpiresAt: Date.now() + HOLD_DURATION_MS
           };
 
+          setBookings(prev => [bookingRecord, ...prev]);
           navigate('mock_payment', selectedType, bookingRecord);
         };
 
@@ -649,7 +690,7 @@
         );
       };
 
-      // --- FORM WE COME TO YOU (ON-SITE) ---
+      // --- FORM WE COME TO YOU ---
       const OnSiteFlow = () => {
         const [formData, setFormData] = useState({
           groupName: '',
@@ -663,6 +704,21 @@
 
         const handleSubmit = (e) => {
           e.preventDefault();
+          const newReq = {
+            id: 'req_' + Date.now(),
+            groupName: formData.groupName,
+            customerName: formData.groupName,
+            whatsapp: formData.whatsapp,
+            participants: formData.participants,
+            eventDate: formData.eventDate,
+            eventTime: formData.eventTime,
+            location: formData.location,
+            subtotal: formData.participants * products.onsite.price,
+            transportFee: 0,
+            total: formData.participants * products.onsite.price,
+            bookingStatus: 'REQUESTED'
+          };
+          setRequests(prev => [newReq, ...prev]);
           setIsSubmitted(true);
         };
 
@@ -748,6 +804,7 @@
         if (!activeBooking) return navigate('home');
 
         const handleConfirmPayment = () => {
+          setBookings(prev => prev.map(b => b.id === activeBooking.id ? { ...b, bookingStatus: 'CONFIRMED', paymentStatus: 'PAID' } : b));
           navigate('confirmation', selectedType, { ...activeBooking, bookingStatus: 'CONFIRMED', paymentStatus: 'PAID' });
         };
 
@@ -795,15 +852,95 @@
         </div>
       );
 
-      // --- ADMIN LOGIN ---
+      // --- LOOKUP VIEW (Cek Booking Pelanggan) ---
+      const LookupView = () => {
+        const [searchId, setSearchId] = useState('');
+        const [whatsapp, setWhatsapp] = useState('');
+        const [foundBooking, setFoundBooking] = useState(null);
+        const [error, setError] = useState('');
+
+        const handleSearch = (e) => {
+          e.preventDefault();
+          setError('');
+          setFoundBooking(null);
+
+          const match = bookings.find(b => 
+            b.displayId.toUpperCase() === searchId.trim().toUpperCase() && 
+            b.whatsapp.trim() === whatsapp.trim()
+          );
+
+          if (match) {
+            setFoundBooking(match);
+          } else {
+            setError('Data booking tidak ditemukan. Pastikan Booking ID & Nomor WhatsApp sesuai.');
+          }
+        };
+
+        return (
+          <div className="min-h-screen flex flex-col bg-[#F9F7F2]">
+            <Navbar />
+            <div className="max-w-md mx-auto w-full px-4 py-12 flex-grow">
+              <h2 className="text-2xl font-medium mb-1 text-center">Manage Your Booking</h2>
+              <p className="text-xs text-stone-500 text-center mb-6">Masukkan Booking ID & Nomor WhatsApp terdaftar Anda.</p>
+
+              <form onSubmit={handleSearch} className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm space-y-3 mb-6">
+                <div>
+                  <label className="block text-xs font-medium mb-1">Booking ID</label>
+                  <input required type="text" value={searchId} onChange={e => setSearchId(e.target.value)} placeholder="e.g. CHP-12840" className="w-full p-2.5 border rounded-md text-sm font-mono uppercase" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1">Nomor WhatsApp</label>
+                  <input required type="tel" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="e.g. 081234567890" className="w-full p-2.5 border rounded-md text-sm" />
+                </div>
+                <button type="submit" className={`w-full py-2.5 rounded-md font-medium text-xs text-white ${theme.primary} transition mt-2`}>
+                  CARI BOOKING
+                </button>
+              </form>
+
+              {error && <div className="bg-red-50 text-red-700 text-xs p-3 rounded-md border border-red-200 text-center mb-4">{error}</div>}
+
+              {foundBooking && (
+                <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-md space-y-4">
+                  <div className="flex justify-between items-start border-b pb-3">
+                    <div>
+                      <span className="text-[10px] text-stone-400 uppercase">Booking ID</span>
+                      <p className="font-mono font-bold text-stone-900">{foundBooking.displayId}</p>
+                    </div>
+                    <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full uppercase ${foundBooking.bookingStatus === 'CONFIRMED' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {foundBooking.bookingStatus}
+                    </span>
+                  </div>
+
+                  <div className="text-xs space-y-2 text-stone-700">
+                    <div className="flex justify-between"><span className="text-stone-400">Pemesan:</span><span>{foundBooking.customerName}</span></div>
+                    <div className="flex justify-between"><span className="text-stone-400">Kelas:</span><span>{foundBooking.bookingType}</span></div>
+                    <div className="flex justify-between"><span className="text-stone-400">Jadwal:</span><span>{formatDate(foundBooking.date)} ({foundBooking.time} WIB)</span></div>
+                    <div className="flex justify-between"><span className="text-stone-400">Peserta:</span><span>{foundBooking.participants} Orang</span></div>
+                    <div className="flex justify-between font-semibold pt-2 border-t"><span>Total:</span><span className="text-[#8B5A2B]">{formatCurrency(foundBooking.total)}</span></div>
+                  </div>
+
+                  {foundBooking.bookingStatus === 'PENDING_PAYMENT' && (
+                    <button onClick={() => navigate('mock_payment', foundBooking.bookingType, foundBooking)} className="w-full bg-amber-600 hover:bg-amber-700 text-white py-2.5 rounded-md text-xs font-medium">
+                      BAYAR SEKARANG
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            <Footer />
+          </div>
+        );
+      };
+
+      // --- ADMIN LOGIN VIEW ---
       const AdminLoginView = () => {
-        const [email, setEmail] = useState('');
-        const [password, setPassword] = useState('');
+        const [email, setEmail] = useState('admin@ruangqu.com');
+        const [password, setPassword] = useState('admin123');
 
         const handleLogin = (e) => {
           e.preventDefault();
           if (email === 'admin@ruangqu.com' && password === 'admin123') {
-            setAdminProfile({ email: 'admin@ruangqu.com', role: 'admin' });
+            setAdminProfile({ email: 'admin@ruangqu.com', role: 'admin', name: 'RuangQu Administrator' });
             navigate('admin');
           } else {
             alert('Email/Password salah! Gunakan: admin@ruangqu.com / admin123');
@@ -815,21 +952,281 @@
             <Navbar />
             <div className="flex-grow flex items-center justify-center p-4">
               <div className="bg-white p-8 rounded-xl max-w-sm w-full border shadow-md space-y-4">
-                <h2 className="text-lg font-medium text-center">Admin Login</h2>
+                <div className="text-center">
+                  <div className="w-10 h-10 bg-[#8B5A2B] text-white rounded flex items-center justify-center font-bold mx-auto mb-2 text-xs">RQ</div>
+                  <h2 className="text-lg font-medium">Admin Authentication</h2>
+                  <p className="text-[11px] text-stone-500">Masuk ke RuangQu Admin Portal</p>
+                </div>
+
                 <form onSubmit={handleLogin} className="space-y-3 text-xs">
                   <div>
-                    <label className="block mb-1 font-medium">Email</label>
-                    <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@ruangqu.com" className="w-full p-2.5 border rounded-md" />
+                    <label className="block mb-1 font-medium">Email Admin</label>
+                    <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full p-2.5 border rounded-md" />
                   </div>
                   <div>
                     <label className="block mb-1 font-medium">Password</label>
-                    <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="admin123" className="w-full p-2.5 border rounded-md" />
+                    <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full p-2.5 border rounded-md" />
                   </div>
-                  <button type="submit" className={`w-full py-2.5 text-white rounded-md font-medium ${theme.primary} shadow-md`}>LOGIN</button>
+                  <button type="submit" className={`w-full py-2.5 text-white rounded-md font-medium ${theme.primary} shadow-md`}>LOGIN KELOLA WEB</button>
                 </form>
+
+                <div className="text-center pt-2 border-t text-[10px] text-stone-400">
+                  Kredensial Default: admin@ruangqu.com / admin123
+                </div>
               </div>
             </div>
             <Footer />
+          </div>
+        );
+      };
+
+      // --- ADMIN DASHBOARD VIEW ---
+      const AdminDashboardView = () => {
+        const [adminTab, setAdminTab] = useState('overview');
+        const [editingPrices, setEditingPrices] = useState({
+          individual: products.individual.price,
+          group: products.group.price,
+          onsite: products.onsite.price
+        });
+
+        const handleLogout = () => {
+          setAdminProfile(null);
+          navigate('home');
+        };
+
+        const totalRevenue = bookings.reduce((sum, b) => sum + (b.paymentStatus === 'PAID' ? b.total : 0), 0);
+
+        const handleUpdateBookingStatus = (id, newStatus) => {
+          setBookings(prev => prev.map(b => b.id === id ? {
+            ...b,
+            bookingStatus: newStatus,
+            paymentStatus: newStatus === 'CONFIRMED' ? 'PAID' : 'FAILED'
+          } : b));
+        };
+
+        const handleApproveRequest = (id, fee) => {
+          setRequests(prev => prev.map(r => r.id === id ? {
+            ...r,
+            transportFee: fee,
+            total: r.subtotal + fee,
+            bookingStatus: 'APPROVED'
+          } : r));
+        };
+
+        const handleSavePrices = () => {
+          setProducts({
+            individual: { ...products.individual, price: parseInt(editingPrices.individual) },
+            group: { ...products.group, price: parseInt(editingPrices.group) },
+            onsite: { ...products.onsite, price: parseInt(editingPrices.onsite) }
+          });
+          alert('Harga berhasil diperbarui!');
+        };
+
+        return (
+          <div className="flex min-h-screen bg-[#F4F4F5]">
+            {/* SIDEBAR ADMIN */}
+            <aside className="w-64 bg-[#2D2A26] text-stone-300 min-h-screen flex flex-col shrink-0">
+              <div className="p-5 border-b border-stone-700 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 bg-[#8B5A2B] text-white rounded flex items-center justify-center font-bold text-xs">RQ</div>
+                  <div>
+                    <span className="font-semibold text-white text-xs block">ADMIN PORTAL</span>
+                    <span className="text-[10px] text-stone-400 block">{adminProfile?.email}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-grow py-5 px-3 flex flex-col gap-1 text-xs font-medium">
+                <button onClick={() => setAdminTab('overview')} className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md transition ${adminTab === 'overview' ? 'bg-[#8B5A2B] text-white' : 'hover:bg-stone-800'}`}>
+                  <IconDashboard size={15}/> Overview
+                </button>
+                <button onClick={() => setAdminTab('schedule')} className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md transition ${adminTab === 'schedule' ? 'bg-[#8B5A2B] text-white' : 'hover:bg-stone-800'}`}>
+                  <IconCalendar size={15}/> Kelola Jadwal & Sesi
+                </button>
+                <button onClick={() => setAdminTab('bookings')} className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md transition ${adminTab === 'bookings' ? 'bg-[#8B5A2B] text-white' : 'hover:bg-stone-800'}`}>
+                  <IconUsers size={15}/> Database Booking ({bookings.length})
+                </button>
+                <button onClick={() => setAdminTab('requests')} className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md transition ${adminTab === 'requests' ? 'bg-[#8B5A2B] text-white' : 'hover:bg-stone-800'}`}>
+                  <IconCalendar size={15}/> Permintaan On-Site ({requests.length})
+                </button>
+                <button onClick={() => setAdminTab('pricing')} className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-md transition ${adminTab === 'pricing' ? 'bg-[#8B5A2B] text-white' : 'hover:bg-stone-800'}`}>
+                  <IconSliders size={15}/> Pengaturan Harga
+                </button>
+              </div>
+
+              <div className="p-4 border-t border-stone-800">
+                <button onClick={handleLogout} className="flex items-center gap-2 text-xs text-red-400 hover:text-red-300 w-full px-2 py-1.5 transition">
+                  <IconLogOut size={14}/> Logout Admin
+                </button>
+              </div>
+            </aside>
+
+            {/* MAIN ADMIN CONTENT */}
+            <main className="flex-1 overflow-auto p-6 md:p-8">
+              {adminTab === 'overview' && (
+                <div className="space-y-6">
+                  <h2 className="text-xl font-medium text-stone-800">Dashboard Overview</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-white p-5 rounded-xl border border-stone-200 shadow-sm">
+                      <span className="text-[11px] text-stone-500 uppercase">Total Pendapatan Lunas</span>
+                      <p className="text-2xl font-bold text-[#8B5A2B] mt-1">{formatCurrency(totalRevenue)}</p>
+                    </div>
+                    <div className="bg-white p-5 rounded-xl border border-stone-200 shadow-sm">
+                      <span className="text-[11px] text-stone-500 uppercase">Total Transaksi Booking</span>
+                      <p className="text-2xl font-bold text-stone-800 mt-1">{bookings.length}</p>
+                    </div>
+                    <div className="bg-white p-5 rounded-xl border border-stone-200 shadow-sm">
+                      <span className="text-[11px] text-stone-500 uppercase">Permintaan On-Site</span>
+                      <p className="text-2xl font-bold text-blue-600 mt-1">{requests.length}</p>
+                    </div>
+                    <div className="bg-white p-5 rounded-xl border border-stone-200 shadow-sm">
+                      <span className="text-[11px] text-stone-500 uppercase">Total Sesi Terjadwal</span>
+                      <p className="text-2xl font-bold text-green-600 mt-1">{allSessions.length}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {adminTab === 'schedule' && (
+                <div className="space-y-6">
+                  <h2 className="text-xl font-medium text-stone-800">Kelola Jadwal & Sesi</h2>
+                  <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-stone-50 text-stone-500 border-b uppercase font-medium">
+                        <tr>
+                          <th className="p-3">Tanggal</th>
+                          <th className="p-3">Nama Sesi</th>
+                          <th className="p-3">Jam Sesi</th>
+                          <th className="p-3">Tipe</th>
+                          <th className="p-3">Kapasitas</th>
+                          <th className="p-3">Terisi</th>
+                          <th className="p-3">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-stone-100">
+                        {allSessions.slice(0, 15).map(s => (
+                          <tr key={s.id} className="hover:bg-stone-50">
+                            <td className="p-3 font-medium">{s.date}</td>
+                            <td className="p-3">{s.sessionName}</td>
+                            <td className="p-3">{s.startTime} - {s.endTime} WIB</td>
+                            <td className="p-3"><span className="px-2 py-0.5 rounded bg-stone-100 font-semibold">{s.sessionType}</span></td>
+                            <td className="p-3">{s.capacity} Pax</td>
+                            <td className="p-3 font-bold text-[#8B5A2B]">{s.booked || 0}</td>
+                            <td className="p-3"><span className="px-2 py-0.5 text-[10px] bg-green-100 text-green-700 font-bold rounded">OPEN</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {adminTab === 'bookings' && (
+                <div className="space-y-6">
+                  <h2 className="text-xl font-medium text-stone-800">Database Booking Masuk</h2>
+                  <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-stone-50 text-stone-500 border-b uppercase font-medium">
+                        <tr>
+                          <th className="p-3">ID</th>
+                          <th className="p-3">Pemesan</th>
+                          <th className="p-3">Tipe Kelas</th>
+                          <th className="p-3">Tanggal & Jam</th>
+                          <th className="p-3">Peserta</th>
+                          <th className="p-3">Total</th>
+                          <th className="p-3">Status</th>
+                          <th className="p-3 text-right">Aksi Admin</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-stone-100">
+                        {bookings.map(b => (
+                          <tr key={b.id} className="hover:bg-stone-50">
+                            <td className="p-3 font-mono font-bold">{b.displayId}</td>
+                            <td className="p-3">
+                              <p className="font-medium text-stone-900">{b.customerName}</p>
+                              <p className="text-[10px] text-stone-400">{b.whatsapp}</p>
+                            </td>
+                            <td className="p-3"><span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 font-semibold">{b.bookingType}</span></td>
+                            <td className="p-3">{b.date} ({b.time} WIB)</td>
+                            <td className="p-3 font-semibold">{b.participants} Pax</td>
+                            <td className="p-3 font-bold text-[#8B5A2B]">{formatCurrency(b.total)}</td>
+                            <td className="p-3">
+                              <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${b.bookingStatus === 'CONFIRMED' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                {b.bookingStatus}
+                              </span>
+                            </td>
+                            <td className="p-3 text-right space-x-2">
+                              {b.bookingStatus !== 'CONFIRMED' && (
+                                <button onClick={() => handleUpdateBookingStatus(b.id, 'CONFIRMED')} className="text-emerald-600 hover:underline">Tandai Lunas</button>
+                              )}
+                              {b.bookingStatus === 'CONFIRMED' && (
+                                <button onClick={() => handleUpdateBookingStatus(b.id, 'CANCELLED')} className="text-red-500 hover:underline">Batalkan</button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {adminTab === 'requests' && (
+                <div className="space-y-6">
+                  <h2 className="text-xl font-medium text-stone-800">Permintaan On-Site Workshop</h2>
+                  <div className="space-y-4">
+                    {requests.map(r => (
+                      <div key={r.id} className="bg-white p-5 rounded-xl border border-stone-200 shadow-sm flex flex-col md:flex-row justify-between gap-4">
+                        <div className="space-y-1 text-xs">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-sm text-stone-900">{r.groupName}</h4>
+                            <span className="px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded">{r.bookingStatus}</span>
+                          </div>
+                          <p className="text-stone-500">WhatsApp: <span className="text-stone-800 font-medium">{r.whatsapp}</span></p>
+                          <p className="text-stone-500">Tanggal & Jam: <span className="text-stone-800 font-medium">{r.eventDate} ({r.eventTime} WIB)</span> • {r.participants} Pax</p>
+                          <p className="text-stone-500">Lokasi: <span className="text-stone-800 font-medium">{r.location}</span></p>
+                        </div>
+                        <div className="text-right text-xs space-y-2">
+                          <p className="text-stone-400">Subtotal: {formatCurrency(r.subtotal)}</p>
+                          <p className="font-bold text-sm text-[#8B5A2B]">Total: {formatCurrency(r.total)}</p>
+                          {r.bookingStatus === 'REQUESTED' && (
+                            <button onClick={() => {
+                              const fee = prompt('Masukkan Biaya Transportasi (Rp):', '250000');
+                              if (fee !== null) handleApproveRequest(r.id, parseInt(fee) || 0);
+                            }} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded font-medium">
+                              Setujui & Tambah Ongkir
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {adminTab === 'pricing' && (
+                <div className="space-y-6">
+                  <h2 className="text-xl font-medium text-stone-800">Pengaturan Harga Workshop</h2>
+                  <div className="bg-white p-6 rounded-xl border border-stone-200 max-w-md space-y-4 text-xs">
+                    <div>
+                      <label className="block font-medium mb-1">Harga Individual Class (Rp / Orang)</label>
+                      <input type="number" value={editingPrices.individual} onChange={e => setEditingPrices({...editingPrices, individual: e.target.value})} className="w-full p-2.5 border rounded-md" />
+                    </div>
+                    <div>
+                      <label className="block font-medium mb-1">Harga Group Class (Rp / Orang)</label>
+                      <input type="number" value={editingPrices.group} onChange={e => setEditingPrices({...editingPrices, group: e.target.value})} className="w-full p-2.5 border rounded-md" />
+                    </div>
+                    <div>
+                      <label className="block font-medium mb-1">Harga On-Site Event Base (Rp / Orang)</label>
+                      <input type="number" value={editingPrices.onsite} onChange={e => setEditingPrices({...editingPrices, onsite: e.target.value})} className="w-full p-2.5 border rounded-md" />
+                    </div>
+                    <button onClick={handleSavePrices} className={`w-full py-2.5 text-white rounded-md font-medium ${theme.primary} shadow-md`}>
+                      SIMPAN PERUBAHAN HARGA
+                    </button>
+                  </div>
+                </div>
+              )}
+            </main>
           </div>
         );
       };
@@ -841,9 +1238,9 @@
         onsite: <OnSiteFlow />,
         mock_payment: <MockPaymentCheckout />,
         confirmation: <ConfirmationView />,
-        lookup: <HomeView />,
+        lookup: <LookupView />,
         admin_login: <AdminLoginView />,
-        admin: <HomeView />
+        admin: <AdminDashboardView />
       };
 
       return (
