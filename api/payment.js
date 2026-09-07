@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // Mengizinkan panggilan dari domain GitHub Pages
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -14,6 +13,11 @@ export default async function handler(req, res) {
 
   const { bookingId, customerName, customerEmail, customerPhone, amount, description } = req.body;
 
+  // Mengambil domain Vercel yang sedang diakses secara otomatis
+  const origin = req.headers.referer 
+    ? new URL(req.headers.referer).origin 
+    : 'https://chopstick-making-by-ruang-qu.vercel.app';
+
   try {
     const response = await fetch('https://api.mayar.id/hl/v1/payment/create', {
       method: 'POST',
@@ -27,7 +31,8 @@ export default async function handler(req, res) {
         mobileVia: customerPhone,
         amount: Number(amount),
         description: description || `Booking Chopstick Class - ${bookingId}`,
-        redirectUrl: `https://limitecreativemedia.github.io/Chopstick-Making-By-RuangQU/?booking_id=${bookingId}&status=success`
+        // REDIRECT DIBUAT DINAMIS KE DOMAIN VERCEL
+        redirectUrl: `${origin}/?booking_id=${bookingId}&status=success`
       })
     });
 
