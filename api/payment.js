@@ -11,20 +11,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { bookingId, customerName, customerEmail, customerPhone, amount, description } = req.body;
+  const { bookingId, customerName, customerEmail, customerPhone, amount, description, redirectUrl: customRedirectUrl } = req.body;
 
-  // Menangkap URL asal lengkap (termasuk subfolder /Chopstick-Making-By-RuangQU/)
-  let returnBaseUrl = 'https://chopstick-making-by-ruang-qu.vercel.app/';
-  
-  if (req.headers.referer) {
-    returnBaseUrl = req.headers.referer.split('?')[0];
-  }
-
-  if (!returnBaseUrl.endsWith('/')) {
-    returnBaseUrl += '/';
-  }
-
-  const redirectUrl = `${returnBaseUrl}?booking_id=${bookingId}&status=success`;
+  // Menggunakan URL lengkap yang dikirim dari browser atau fallback ke GitHub Pages lengkap
+  const finalRedirectUrl = customRedirectUrl || `https://limitecreativemedia.github.io/Chopstick-Making-By-RuangQU/?booking_id=${bookingId}&status=success`;
 
   try {
     const response = await fetch('https://api.mayar.id/hl/v1/payment/create', {
@@ -39,7 +29,7 @@ export default async function handler(req, res) {
         mobileVia: customerPhone,
         amount: Number(amount),
         description: description || `Booking Chopstick Class - ${bookingId}`,
-        redirectUrl: redirectUrl
+        redirectUrl: finalRedirectUrl
       })
     });
 
