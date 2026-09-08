@@ -27,6 +27,12 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
 
+    // --- PENGATURAN USERNAME & PIN ADMIN ---
+    const DEFAULT_ADMIN_CONFIG = {
+      username: "myhugo",  // Masukkan username pilihan kamu di sini
+      pin: "5432109876"         // Masukkan PIN / Password pilihan kamu di sini
+    };
+
     // --- PEMETAAN GAMBAR ---
     const APP_IMAGES = {
       HERO_IMAGE: './Hero image.png',
@@ -80,14 +86,10 @@
       card: 'bg-white',
     };
 
-// --- INTEGRASI PEMBAYARAN MAYAR VIA VERCEL SERVERLESS ---
+    // --- INTEGRASI PEMBAYARAN MAYAR VIA VERCEL SERVERLESS ---
     const paymentService = {
       createPayment: async ({ bookingId, customerName, customerEmail, customerPhone, amount, description }) => {
         try {
-          // Mengambil URL lengkap halaman saat ini agar nama folder GitHub tidak terpotong
-          const currentBaseUrl = window.location.href.split('?')[0].split('#')[0];
-          const fullRedirectUrl = `${currentBaseUrl}?booking_id=${bookingId}&status=success`;
-
           const response = await fetch('/api/payment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -97,8 +99,7 @@
               customerEmail,
               customerPhone,
               amount,
-              description,
-              redirectUrl: fullRedirectUrl // Mengirimkan URL utuh ke Mayar
+              description
             })
           });
 
@@ -121,11 +122,12 @@
         }
       }
     };
-    
-    // --- GENERATOR JADWAL BULANAN DENGAN SISTEM PENGURANGAN SLOT ---
-    const generateMonthlySchedule = (bookedSlotsMap = {}) => {
+
+    // --- GENERATOR JADWAL DINAMIS REAL-TIME (60 HARI KE DEPAN FROM TODAY) ---
+    const generateDynamicSchedule = (bookedSlotsMap = {}) => {
       const schedule = [];
-      const daysInSeptember2026 = 30;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset jam ke awal hari ini
 
       const dailySessionTemplates = [
         { idSuffix: 's1', time: '10:00 - 11:00', type: 'INDIVIDUAL', name: 'Sesi 1 (Individual)', capacity: 10 },
@@ -135,46 +137,37 @@
         { idSuffix: 's5', time: '16:00 - 17:00', type: 'INDIVIDUAL', name: 'Sesi 5 (Individual)', capacity: 10 }
       ];
 
-      for (let day = 1; day <= daysInSeptember2026; day++) {
-        const dateStr = `2026-09-${day < 10 ? '0' + day : day}`;
-        const dateObj = new Date(dateStr);
-        const dayOfWeek = dateObj.getDay();
+      // Membuat jadwal otomatis untuk 60 hari ke depan mulai hari ini
+      for (let i = 0; i < 60; i++) {
+        const dateObj = new Date(today);
+        dateObj.setDate(today.getDate() + i);
 
-        let isAvailableDay = false;
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
 
-        if (day >= 1 && day <= 7) {
-          if (dayOfWeek === 1 || dayOfWeek === 3 || dayOfWeek === 6) isAvailableDay = true;
-        } else if (day >= 8 && day <= 14) {
-          if (dayOfWeek === 2 || dayOfWeek === 4 || dayOfWeek === 0) isAvailableDay = true;
-        } else if (day >= 15 && day <= 21) {
-          if (dayOfWeek === 2 || dayOfWeek === 5 || dayOfWeek === 6) isAvailableDay = true;
-        } else if (day >= 22) {
-          if (dayOfWeek === 1 || dayOfWeek === 4 || dayOfWeek === 0) isAvailableDay = true;
-        }
-
-        if (isAvailableDay) {
-          dailySessionTemplates.forEach((template) => {
-            const sessionId = `${dateStr}-${template.idSuffix}`;
-            const existingBooked = bookedSlotsMap[sessionId] || 0;
-            schedule.push({
-              id: sessionId,
-              date: dateStr,
-              startTime: template.time.split(' - ')[0],
-              endTime: template.time.split(' - ')[1],
-              sessionType: template.type,
-              sessionName: template.name,
-              capacity: template.capacity,
-              booked: existingBooked,
-              status: existingBooked >= template.capacity ? 'FULL' : 'OPEN'
-            });
+        dailySessionTemplates.forEach((template) => {
+          const sessionId = `${dateStr}-${template.idSuffix}`;
+          const existingBooked = bookedSlotsMap[sessionId] || 0;
+          schedule.push({
+            id: sessionId,
+            date: dateStr,
+            startTime: template.time.split(' - ')[0],
+            endTime: template.time.split(' - ')[1],
+            sessionType: template.type,
+            sessionName: template.name,
+            capacity: template.capacity,
+            booked: existingBooked,
+            status: existingBooked >= template.capacity ? 'FULL' : 'OPEN'
           });
-        }
+        });
       }
 
       return schedule;
     };
 
-    // --- COMPONENT FOTO AMAN ---
+    // --- COMPONENT FOTO ---
     const PlaceholderImage = ({ label, className = "", style = {} }) => {
       const [imgError, setImgError] = useState(false);
       const imgSrc = APP_IMAGES[label];
@@ -242,11 +235,11 @@
         return saved ? JSON.parse(saved) : [];
       });
 
+      // JADWAL AKAN SELALU DINAMIS SESUAI HARI INI
       const allSessions = useMemo(() => {
-        return generateMonthlySchedule(bookedSlotsMap);
+        return generateDynamicSchedule(bookedSlotsMap);
       }, [bookedSlotsMap]);
 
-      // SIMPAN DATA KE LOCALSTORAGE TIAP ADA PERUBAHAN
       useEffect(() => {
         localStorage.setItem('ruangqu_bookings', JSON.stringify(bookings));
       }, [bookings]);
@@ -278,14 +271,12 @@
               paidAt: Date.now()
             };
 
-            // Tambahkan ke database lokal jika belum ada
             setBookings(prev => {
               const exists = prev.some(b => b.displayId === bookingId);
               if (!exists) return [confirmedBooking, ...prev];
               return prev.map(b => b.displayId === bookingId ? confirmedBooking : b);
             });
 
-            // Kurangi Slot Sesi
             if (pendingData.sessionId) {
               setBookedSlotsMap(prev => ({
                 ...prev,
@@ -296,7 +287,6 @@
             setActiveBooking(confirmedBooking);
             setCurrentView('confirmation');
           } else {
-            // Jika data pending tidak ditemukan, buat placeholder terkonfirmasi
             setActiveBooking({
               displayId: bookingId,
               bookingStatus: 'CONFIRMED',
@@ -599,7 +589,6 @@
             createdAt: Date.now()
           };
 
-          // DENGAN CEPAT SIMPAN PENDING DATA KE LOCALSTORAGE SEBELUM DILIHALIKAN KE MAYAR
           localStorage.setItem('ruangqu_pending_' + bookingId, JSON.stringify(pendingBooking));
 
           await paymentService.createPayment({
@@ -640,7 +629,7 @@
                 {step === 1 && (
                   <div className="space-y-6">
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-2">1. Pilih Tanggal (September 2026)</label>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-2">1. Pilih Tanggal Workshop (Tersedia 60 Hari Ke Depan)</label>
                       <div className="flex flex-wrap gap-2.5">
                         {uniqueDates.map(date => (
                           <button 
@@ -941,7 +930,7 @@
         </div>
       );
 
-      // --- LOOKUP VIEW (CEK BOOKING PELANGGAN) ---
+      // --- LOOKUP VIEW ---
       const LookupView = () => {
         const [searchId, setSearchId] = useState('');
         const [whatsapp, setWhatsapp] = useState('');
@@ -1015,18 +1004,21 @@
         );
       };
 
-      // --- ADMIN LOGIN VIEW ---
+      // --- ADMIN LOGIN VIEW (TANPA HINT BANTUAN) ---
       const AdminLoginView = () => {
-        const [email, setEmail] = useState('admin@ruangqu.com');
-        const [password, setPassword] = useState('admin123');
+        const [username, setUsername] = useState('');
+        const [pin, setPin] = useState('');
 
         const handleLogin = (e) => {
           e.preventDefault();
-          if (email === 'admin@ruangqu.com' && password === 'admin123') {
-            setAdminProfile({ email: 'admin@ruangqu.com', role: 'admin', name: 'RuangQu Administrator' });
+          if (
+            username.trim().toLowerCase() === DEFAULT_ADMIN_CONFIG.username.toLowerCase() && 
+            pin.trim() === DEFAULT_ADMIN_CONFIG.pin
+          ) {
+            setAdminProfile({ username: username, role: 'admin', name: 'RuangQu Administrator' });
             navigate('admin');
           } else {
-            alert('Email/Password salah! Gunakan: admin@ruangqu.com / admin123');
+            alert('Username atau PIN salah! Silakan periksa kembali.');
           }
         };
 
@@ -1034,23 +1026,39 @@
           <div className="min-h-screen flex flex-col bg-[#F9F7F2]">
             <Navbar />
             <div className="flex-grow flex items-center justify-center p-4">
-              <div className="bg-white p-8 rounded-xl max-w-sm w-full border shadow-md space-y-4">
+              <div className="bg-white p-8 rounded-xl max-w-sm w-full border border-stone-200 shadow-md space-y-4">
                 <div className="text-center">
                   <div className="w-10 h-10 bg-[#8B5A2B] text-white rounded flex items-center justify-center font-bold mx-auto mb-2 text-xs">RQ</div>
-                  <h2 className="text-lg font-medium">Admin Authentication</h2>
-                  <p className="text-[11px] text-stone-500">Masuk ke RuangQu Admin Portal</p>
+                  <h2 className="text-lg font-medium">Admin Portal</h2>
+                  <p className="text-[11px] text-stone-500">Masukan kredensial admin Anda</p>
                 </div>
 
                 <form onSubmit={handleLogin} className="space-y-3 text-xs">
                   <div>
-                    <label className="block mb-1 font-medium">Email Admin</label>
-                    <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full p-2.5 border rounded-md" />
+                    <label className="block mb-1 font-medium">Username</label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={username} 
+                      onChange={e => setUsername(e.target.value)} 
+                      className="w-full p-2.5 border border-stone-300 rounded-md focus:border-[#8B5A2B] outline-none" 
+                      placeholder="Masukkan Username Admin"
+                    />
                   </div>
                   <div>
-                    <label className="block mb-1 font-medium">Password</label>
-                    <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="w-full p-2.5 border rounded-md" />
+                    <label className="block mb-1 font-medium">PIN / Password</label>
+                    <input 
+                      type="password" 
+                      required 
+                      value={pin} 
+                      onChange={e => setPin(e.target.value)} 
+                      className="w-full p-2.5 border border-stone-300 rounded-md focus:border-[#8B5A2B] outline-none" 
+                      placeholder="Masukkan PIN Admin"
+                    />
                   </div>
-                  <button type="submit" className={`w-full py-2.5 text-white rounded-md font-medium ${theme.primary} shadow-md`}>LOGIN KELOLA WEB</button>
+                  <button type="submit" className={`w-full py-2.5 text-white rounded-md font-medium ${theme.primary} shadow-md transition hover:opacity-90`}>
+                    MASUK ADMIN PORTAL
+                  </button>
                 </form>
               </div>
             </div>
@@ -1092,7 +1100,7 @@
                   <div className="w-7 h-7 bg-[#8B5A2B] text-white rounded flex items-center justify-center font-bold text-xs">RQ</div>
                   <div>
                     <span className="font-semibold text-white text-xs block">ADMIN PORTAL</span>
-                    <span className="text-[10px] text-stone-400 block">{adminProfile?.email}</span>
+                    <span className="text-[10px] text-stone-400 block">User: {adminProfile?.username}</span>
                   </div>
                 </div>
               </div>
@@ -1164,9 +1172,9 @@
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-stone-100">
-                        {allSessions.slice(0, 20).map(s => (
+                        {allSessions.slice(0, 25).map(s => (
                           <tr key={s.id} className="hover:bg-stone-50">
-                            <td className="p-3 font-medium">{s.date}</td>
+                            <td className="p-3 font-medium">{formatDate(s.date)}</td>
                             <td className="p-3">{s.sessionName}</td>
                             <td className="p-3">{s.startTime} - {s.endTime} WIB</td>
                             <td className="p-3"><span className="px-2 py-0.5 rounded bg-stone-100 font-semibold">{s.sessionType}</span></td>
