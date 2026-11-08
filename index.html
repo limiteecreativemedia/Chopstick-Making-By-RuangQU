@@ -33,7 +33,7 @@
       pin: "5432109876"        // Default PIN admin
     };
 
-    const ADMIN_WHATSAPP = "62819866874"; // Format internasional tanpa 0 di depan
+    const ADMIN_WHATSAPP = "62819866874"; // Nomor WhatsApp Admin
 
     const STUDIO_LOCATION = {
       address: "Jl. Agung Timur 8 Blok O4 No. 12A, Sunter, Jakarta Utara",
@@ -95,7 +95,7 @@
 
     // --- INTEGRASI PEMBAYARAN MAYAR VIA VERCEL SERVERLESS ---
     const paymentService = {
-      createPayment: async ({ bookingId, customerName, customerEmail, customerPhone, amount, description }) => {
+      createPayment: async ({ bookingId, customerName, customerEmail, customerPhone, amount, description, date, time }) => {
         try {
           const response = await fetch('/api/payment', {
             method: 'POST',
@@ -106,7 +106,9 @@
               customerEmail,
               customerPhone,
               amount,
-              description
+              description,
+              date,
+              time
             })
           });
 
@@ -150,7 +152,6 @@
 
         const dayOfWeek = dateObj.getDay();
 
-        // RUMUS HARI LIBUR: Skip jika hari Senin (1)
         if (dayOfWeek === 1) {
           continue; 
         }
@@ -409,7 +410,6 @@
               A hands-on woodworking experience where you shape, smooth and personalize your own pair of wooden chopsticks.
             </p>
 
-            {/* ALAMAT & KONTAK ADMIN DI FOOTER */}
             <div className="text-white/90 text-xs bg-white/10 px-4 py-3 rounded-lg border border-white/20 flex flex-col sm:flex-row items-center justify-center gap-4 mt-1">
               <div className="flex items-center gap-2">
                 <IconMapPin size={16} className="text-amber-200 shrink-0"/>
@@ -559,7 +559,6 @@
             </div>
           </section>
 
-          {/* SEKSI LOKASI STUDIO & GOOGLE MAPS */}
           <section id="location" className="py-16 px-4 bg-white border-t border-[#E8E1D5]">
             <div className="max-w-4xl mx-auto bg-[#F9F7F2] p-8 md:p-10 rounded-2xl border border-[#E8E1D5] flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
               <div className="space-y-2 text-center md:text-left">
@@ -705,13 +704,16 @@
 
           localStorage.setItem('ruangqu_pending_' + bookingId, JSON.stringify(pendingBooking));
 
+          // MENGIRIM TANGGAL & JAM SEBAGAI DESKRIPSI LENGKAP KE MAYAR
           await paymentService.createPayment({
             bookingId,
             customerName: formData.name,
             customerEmail: formData.email,
             customerPhone: formData.whatsapp,
             amount: total,
-            description: `Chopstick Class (${selectedType}) - ${participants} Pax`
+            description: `Chopstick Class (${selectedType}) - ${participants} Pax`,
+            date: selectedSession.date,
+            time: selectedSession.startTime
           });
 
           setLoading(false);
@@ -742,7 +744,6 @@
 
                 {step === 1 && (
                   <div className="space-y-6">
-                    {/* STEP 1A: PILIH BULAN */}
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-2.5">1. Pilih Bulan Workshop</label>
                       <div className="flex flex-wrap gap-2">
@@ -766,7 +767,6 @@
                       </div>
                     </div>
 
-                    {/* STEP 1B: PILIH TANGGAL DALAM BULAN TERSEBUT */}
                     {selectedMonth && (
                       <div>
                         <div className="flex justify-between items-center mb-2.5">
@@ -801,7 +801,6 @@
                       </div>
                     )}
 
-                    {/* STEP 2: PILIH SESI JAM */}
                     {selectedDate && (
                       <div>
                         <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-2">3. Pilih Sesi Jam</label>
@@ -835,7 +834,6 @@
                       </div>
                     )}
 
-                    {/* STEP 3: JUMLAH PESERTA */}
                     {selectedSession && (
                       <div>
                         <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-2">4. Jumlah Peserta</label>
@@ -1028,84 +1026,102 @@
       };
 
       // --- CONFIRMATION TICKET / KUPON RESMI ---
-      const ConfirmationView = () => (
-        <div className="min-h-screen flex flex-col bg-[#F9F7F2]">
-          <Navbar />
-          <div className="flex-grow flex items-center justify-center p-4 py-12">
-            <div className="bg-white p-8 rounded-2xl text-center max-w-md w-full shadow-xl border border-stone-200 relative overflow-hidden">
-              <div className="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4"><IconCheckCircle size={36}/></div>
-              
-              <h2 className="text-2xl font-semibold text-stone-900 mb-1">Pembayaran Berhasil!</h2>
-              <p className="text-xs text-stone-500 mb-6">Pendaftaran Anda telah terkonfirmasi secara resmi.</p>
+      const ConfirmationView = () => {
+        const bookingId = activeBooking?.displayId || 'CHP-SUCCESS';
+        const customerName = activeBooking?.customerName || 'Pelanggan';
+        const workshopDate = activeBooking?.date ? formatDate(activeBooking.date) : 'Jadwal Terkonfirmasi';
+        const sessionTime = activeBooking?.time ? `${activeBooking.time} WIB` : '';
+        const pax = activeBooking?.participants || 1;
 
-              {/* TIKET / KUPON PENDAFTARAN */}
-              <div className="bg-[#F9F7F2] p-5 rounded-xl border border-dashed border-[#D8C1B5] text-left text-xs space-y-3 relative mb-6">
-                <div className="flex justify-between items-center border-b border-stone-200 pb-2.5">
-                  <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">BOOKING ID</span>
-                  <span className="font-mono font-bold text-base text-[#8B5A2B] bg-white px-2.5 py-1 rounded border border-[#E8E1D5]">{activeBooking?.displayId || 'CHP-SUCCESS'}</span>
-                </div>
+        // TEKS FORMAT LENGKAP UNTUK WHATSAPP ADMIN
+        const waText = encodeURIComponent(
+          `Halo Admin RuangQu, saya telah membayar booking workshop Chopstick!\n\n` +
+          `📌 Booking ID: ${bookingId}\n` +
+          `👤 Nama Pemesan: ${customerName}\n` +
+          `📅 Tanggal: ${workshopDate}\n` +
+          `⏰ Sesi Jam: ${sessionTime}\n` +
+          `👥 Jumlah Peserta: ${pax} Orang\n\n` +
+          `Mohon konfirmasi pendaftarannya. Terima kasih!`
+        );
 
-                <div className="flex justify-between">
-                  <span className="text-stone-500">Nama Pemesan:</span>
-                  <span className="font-semibold text-stone-800">{activeBooking?.customerName || 'Pelanggan RuangQu'}</span>
-                </div>
+        return (
+          <div className="min-h-screen flex flex-col bg-[#F9F7F2]">
+            <Navbar />
+            <div className="flex-grow flex items-center justify-center p-4 py-12">
+              <div className="bg-white p-8 rounded-2xl text-center max-w-md w-full shadow-xl border border-stone-200 relative overflow-hidden">
+                <div className="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4"><IconCheckCircle size={36}/></div>
+                
+                <h2 className="text-2xl font-semibold text-stone-900 mb-1">Pembayaran Berhasil!</h2>
+                <p className="text-xs text-stone-500 mb-6">Pendaftaran Anda telah terkonfirmasi secara resmi.</p>
 
-                {activeBooking?.date && (
+                {/* TIKET / KUPON PENDAFTARAN */}
+                <div className="bg-[#F9F7F2] p-5 rounded-xl border border-dashed border-[#D8C1B5] text-left text-xs space-y-3 relative mb-6">
+                  <div className="flex justify-between items-center border-b border-stone-200 pb-2.5">
+                    <span className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">BOOKING ID</span>
+                    <span className="font-mono font-bold text-base text-[#8B5A2B] bg-white px-2.5 py-1 rounded border border-[#E8E1D5]">{bookingId}</span>
+                  </div>
+
                   <div className="flex justify-between">
-                    <span className="text-stone-500">Tanggal Workshop:</span>
-                    <span className="font-semibold text-stone-800">{formatDate(activeBooking.date)}</span>
+                    <span className="text-stone-500">Nama Pemesan:</span>
+                    <span className="font-semibold text-stone-800">{customerName}</span>
                   </div>
-                )}
 
-                {activeBooking?.time && (
-                  <div className="flex justify-between">
-                    <span className="text-stone-500">Jam Sesi:</span>
-                    <span className="font-semibold text-stone-800">{activeBooking.sessionName || `${activeBooking.time} WIB`}</span>
+                  {activeBooking?.date && (
+                    <div className="flex justify-between">
+                      <span className="text-stone-500">Tanggal Workshop:</span>
+                      <span className="font-semibold text-stone-800">{workshopDate}</span>
+                    </div>
+                  )}
+
+                  {activeBooking?.time && (
+                    <div className="flex justify-between">
+                      <span className="text-stone-500">Jam Sesi:</span>
+                      <span className="font-semibold text-stone-800">{activeBooking.sessionName || sessionTime}</span>
+                    </div>
+                  )}
+
+                  {activeBooking?.participants && (
+                    <div className="flex justify-between">
+                      <span className="text-stone-500">Jumlah Peserta:</span>
+                      <span className="font-semibold text-stone-800">{pax} Orang</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center pt-2 border-t border-stone-200">
+                    <span className="text-stone-500 font-medium">Status Pembayaran:</span>
+                    <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">LUNAS (MAYAR)</span>
                   </div>
-                )}
 
-                {activeBooking?.participants && (
-                  <div className="flex justify-between">
-                    <span className="text-stone-500">Jumlah Peserta:</span>
-                    <span className="font-semibold text-stone-800">{activeBooking.participants} Orang</span>
+                  <div className="pt-3 border-t border-stone-200 space-y-1.5">
+                    <div>
+                      <p className="text-[10px] text-stone-400 font-bold uppercase">Lokasi Studio:</p>
+                      <p className="text-[11px] text-stone-700 leading-snug">{STUDIO_LOCATION.address}</p>
+                      <a href={STUDIO_LOCATION.mapsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[#8B5A2B] font-semibold text-[11px] mt-0.5 hover:underline">
+                        <IconMapPin size={12}/> Petunjuk Jalan (Google Maps) $\rightarrow$
+                      </a>
+                    </div>
                   </div>
-                )}
-
-                <div className="flex justify-between items-center pt-2 border-t border-stone-200">
-                  <span className="text-stone-500 font-medium">Status Pembayaran:</span>
-                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">LUNAS (MAYAR)</span>
                 </div>
 
-                {/* LOKASI & KONTAK ADMIN DI TIKET */}
-                <div className="pt-3 border-t border-stone-200 space-y-1.5">
-                  <div>
-                    <p className="text-[10px] text-stone-400 font-bold uppercase">Lokasi Studio:</p>
-                    <p className="text-[11px] text-stone-700 leading-snug">{STUDIO_LOCATION.address}</p>
-                    <a href={STUDIO_LOCATION.mapsUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[#8B5A2B] font-semibold text-[11px] mt-0.5 hover:underline">
-                      <IconMapPin size={12}/> Petunjuk Jalan (Google Maps) $\rightarrow$
-                    </a>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-stone-400 font-bold uppercase">Butuh Bantuan?</p>
-                    <a href={`https://wa.me/${ADMIN_WHATSAPP}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-emerald-700 font-semibold text-[11px] hover:underline">
-                      <IconPhone size={12}/> WhatsApp Admin (0819-866-874)
-                    </a>
-                  </div>
-                </div>
+                {/* TOMBOL KONFIRMASI OTOMATIS KE WHATSAPP ADMIN */}
+                <a 
+                  href={`https://wa.me/${ADMIN_WHATSAPP}?text=${waText}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-[#25D366] hover:bg-[#20ba5a] text-white py-3.5 px-4 rounded-xl text-xs font-bold tracking-wide shadow-md flex items-center justify-center gap-2 mb-3 transition"
+                >
+                  <IconPhone size={16}/> KONFIRMASI BOOKING KE WA ADMIN
+                </a>
+
+                <button onClick={() => navigate('home')} className="bg-stone-100 hover:bg-stone-200 text-stone-700 py-3 px-8 rounded-xl text-xs font-semibold w-full transition">
+                  Kembali ke Beranda
+                </button>
               </div>
-
-              <p className="text-[11px] text-stone-500 mb-6 leading-relaxed">
-                Tunjukkan <strong>Booking ID</strong> di atas kepada staf RuangQu Makerspace saat kedatangan. Simpan atau screenshot halaman ini sebagai bukti masuk.
-              </p>
-
-              <button onClick={() => navigate('home')} className={`${theme.primary} text-white py-3 px-8 rounded-lg text-xs font-semibold shadow-md w-full transition hover:opacity-90`}>
-                Kembali ke Beranda
-              </button>
             </div>
+            <Footer />
           </div>
-          <Footer />
-        </div>
-      );
+        );
+      };
 
       // --- LOOKUP VIEW ---
       const LookupView = () => {
