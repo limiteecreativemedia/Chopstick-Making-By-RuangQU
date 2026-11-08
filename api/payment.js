@@ -11,10 +11,16 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { bookingId, customerName, customerEmail, customerPhone, amount, description } = req.body;
+  // 1. Menerima data tambahan: date & time dari frontend
+  const { bookingId, customerName, customerEmail, customerPhone, amount, description, date, time } = req.body;
 
   // DIRECT KEMBALI LANGSUNG KE DOMAIN VERCEL UTAMA
   const redirectUrl = `https://chopstick-making-by-ruang-qu.vercel.app/?booking_id=${bookingId}&status=success`;
+
+  // 2. Format rincian lengkap agar terbaca jelas di Dashboard Mayar & Email Invoice
+  const formattedDate = date ? date : 'Tanggal -';
+  const formattedTime = time ? `Jam ${time}` : 'Jam -';
+  const fullDescription = `${description || 'Chopstick Workshop'} | ${formattedDate} (${formattedTime}) | ID: ${bookingId} | WA: ${customerPhone}`;
 
   try {
     const response = await fetch('https://api.mayar.id/hl/v1/payment/create', {
@@ -28,7 +34,7 @@ export default async function handler(req, res) {
         email: customerEmail || `${customerPhone}@ruangqu.com`,
         mobileVia: customerPhone,
         amount: Number(amount),
-        description: description || `Booking Chopstick Class - ${bookingId}`,
+        description: fullDescription, // Dikirim ke Mayar beserta Tanggal & Jam
         redirectUrl: redirectUrl
       })
     });
